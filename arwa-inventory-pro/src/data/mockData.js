@@ -1,0 +1,233 @@
+export const SUBSCRIPTION_PLANS = {
+  basic: {
+    id: 'basic',
+    name: 'Basic',
+    monthlyPrice: 29,
+    yearlyPrice: 290,
+    color: '#6B7280',
+    gradient: 'linear-gradient(135deg, #6B7280, #9CA3AF)',
+    features: [
+      'Up to 1,000 products',
+      'Basic AI monitoring',
+      'Error logging & crash detection',
+      'Weekly AI reports',
+      'Basic analytics dashboard',
+      '1 warehouse location',
+      '3 staff accounts',
+      'Email support',
+    ],
+    locked: [
+      'Real-time AI monitoring',
+      'Self-healing automation',
+      'Predictive crash warnings',
+      'Multi-branch support',
+      'Advanced analytics',
+    ],
+    aiScansPerDay: 10,
+    selfHealing: false,
+    branches: 1,
+    users: 3,
+    products: 1000,
+  },
+  intermediate: {
+    id: 'intermediate',
+    name: 'Professional',
+    monthlyPrice: 79,
+    yearlyPrice: 790,
+    color: '#4F46E5',
+    gradient: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+    popular: true,
+    features: [
+      'Up to 10,000 products',
+      'Real-time AI monitoring',
+      'Database optimization analysis',
+      'Barcode & POS diagnostics',
+      'Performance scoring',
+      'Predictive crash warnings',
+      'Advanced analytics',
+      'Daily AI reports',
+      '3 warehouse locations',
+      '15 staff accounts',
+      'Priority support',
+    ],
+    locked: [
+      'AI Self-Healing Engine',
+      'Auto code repair',
+      'Enterprise monitoring',
+      'Multi-company analytics',
+    ],
+    aiScansPerDay: 100,
+    selfHealing: false,
+    branches: 3,
+    users: 15,
+    products: 10000,
+  },
+  super: {
+    id: 'super',
+    name: 'Enterprise',
+    monthlyPrice: 199,
+    yearlyPrice: 1990,
+    color: '#059669',
+    gradient: 'linear-gradient(135deg, #059669, #0D9488)',
+    features: [
+      'Unlimited products',
+      'Enterprise AI monitoring',
+      'Unlimited AI scans',
+      'Multi-company analytics',
+      'Advanced business forecasting',
+      'Deep security analysis',
+      'Business intelligence dashboard',
+      'Unlimited warehouse locations',
+      'Unlimited staff accounts',
+      'Franchise support',
+      'White-label ready',
+      '24/7 priority support',
+    ],
+    locked: ['AI Self-Healing Engine (Add-on required)'],
+    aiScansPerDay: -1,
+    selfHealing: false,
+    branches: -1,
+    users: -1,
+    products: -1,
+  },
+};
+
+export const SELF_HEALING_ADDON = {
+  monthlyPrice: 99,
+  yearlyPrice: 990,
+  name: 'AI Self-Healing Engine',
+  features: [
+    'Automatic bug detection & fixing',
+    'Auto code repair & patching',
+    'Auto dependency resolution',
+    'Automatic database optimization',
+    'Auto memory leak fixing',
+    'Auto rollback & crash recovery',
+    'Auto service restart',
+    'Admin approval workflow',
+    'Complete repair audit logs',
+    'Isolated test environment',
+  ],
+};
+
+export const PRODUCTS = [
+  { id: 1, name: 'Paracetamol 500mg', sku: 'MED-001', barcode: '8901234567890', category: 'Pharmaceuticals', supplier: 'PharmaCo Ltd', purchasePrice: 2.50, salePrice: 5.99, stock: 450, minStock: 100, expiry: '2025-12-31', warehouse: 'Main Store', image: null, tax: 0, status: 'active' },
+  { id: 2, name: 'iPhone 15 Pro', sku: 'ELEC-001', barcode: '8902345678901', category: 'Electronics', supplier: 'TechSupply Inc', purchasePrice: 850, salePrice: 1199, stock: 23, minStock: 5, expiry: null, warehouse: 'Main Store', image: null, tax: 15, status: 'active' },
+  { id: 3, name: 'Organic Whole Milk 1L', sku: 'GROC-001', barcode: '8903456789012', category: 'Groceries', supplier: 'FreshFarm Co', purchasePrice: 0.80, salePrice: 1.99, stock: 12, minStock: 50, expiry: '2024-07-20', warehouse: 'Cold Storage', image: null, tax: 0, status: 'low_stock' },
+  { id: 4, name: 'Men\'s Cotton T-Shirt (L)', sku: 'CLTH-001', barcode: '8904567890123', category: 'Clothing', supplier: 'FashionWear Ltd', purchasePrice: 8, salePrice: 24.99, stock: 87, minStock: 20, expiry: null, warehouse: 'Main Store', image: null, tax: 10, status: 'active' },
+  { id: 5, name: 'Samsung 65" QLED TV', sku: 'ELEC-002', barcode: '8905678901234', category: 'Electronics', supplier: 'TechSupply Inc', purchasePrice: 620, salePrice: 999, stock: 8, minStock: 3, expiry: null, warehouse: 'Main Store', image: null, tax: 15, status: 'active' },
+  { id: 6, name: 'Vitamin D3 1000IU', sku: 'MED-002', barcode: '8906789012345', category: 'Pharmaceuticals', supplier: 'PharmaCo Ltd', purchasePrice: 3.20, salePrice: 8.99, stock: 234, minStock: 50, expiry: '2025-08-15', warehouse: 'Main Store', image: null, tax: 0, status: 'active' },
+  { id: 7, name: 'Basmati Rice 5kg', sku: 'GROC-002', barcode: '8907890123456', category: 'Groceries', supplier: 'GrainMaster', purchasePrice: 4.50, salePrice: 9.99, stock: 156, minStock: 30, expiry: '2025-01-01', warehouse: 'Dry Goods', image: null, tax: 0, status: 'active' },
+  { id: 8, name: 'HP LaserJet Toner', sku: 'SUPP-001', barcode: '8908901234567', category: 'Office Supplies', supplier: 'OfficeWorld', purchasePrice: 35, salePrice: 69.99, stock: 3, minStock: 10, expiry: null, warehouse: 'Main Store', image: null, tax: 15, status: 'low_stock' },
+  { id: 9, name: 'Nike Air Max 270', sku: 'SHOE-001', barcode: '8909012345678', category: 'Footwear', supplier: 'SportsZone Ltd', purchasePrice: 55, salePrice: 129.99, stock: 41, minStock: 10, expiry: null, warehouse: 'Main Store', image: null, tax: 10, status: 'active' },
+  { id: 10, name: 'Wireless Mouse Logitech', sku: 'ELEC-003', barcode: '8900123456789', category: 'Electronics', supplier: 'TechSupply Inc', purchasePrice: 18, salePrice: 39.99, stock: 0, minStock: 15, expiry: null, warehouse: 'Main Store', image: null, tax: 15, status: 'out_of_stock' },
+  { id: 11, name: 'Amoxicillin 250mg', sku: 'MED-003', barcode: '8901234567891', category: 'Pharmaceuticals', supplier: 'PharmaCo Ltd', purchasePrice: 4.10, salePrice: 12.99, stock: 89, minStock: 30, expiry: '2024-09-30', warehouse: 'Main Store', image: null, tax: 0, status: 'expiring_soon' },
+  { id: 12, name: 'Coca-Cola 24-Pack', sku: 'BEV-001', barcode: '8901234567892', category: 'Beverages', supplier: 'BevDistrib Co', purchasePrice: 7.50, salePrice: 15.99, stock: 67, minStock: 20, expiry: '2024-12-01', warehouse: 'Dry Goods', image: null, tax: 5, status: 'active' },
+];
+
+export const CATEGORIES = [
+  'Pharmaceuticals', 'Electronics', 'Groceries', 'Clothing', 'Footwear',
+  'Beverages', 'Office Supplies', 'Hardware', 'Automotive', 'Medical',
+  'Industrial', 'Beauty & Personal Care', 'Toys & Games', 'Sports & Fitness',
+];
+
+export const SUPPLIERS = [
+  { id: 1, name: 'PharmaCo Ltd', email: 'orders@pharmaco.com', phone: '+1-555-0101', country: 'USA', rating: 4.8, totalOrders: 145, balance: 2450 },
+  { id: 2, name: 'TechSupply Inc', email: 'supply@techsupply.com', phone: '+1-555-0102', country: 'USA', rating: 4.6, totalOrders: 89, balance: 15600 },
+  { id: 3, name: 'FreshFarm Co', email: 'fresh@freshfarm.com', phone: '+1-555-0103', country: 'Canada', rating: 4.9, totalOrders: 312, balance: 890 },
+  { id: 4, name: 'FashionWear Ltd', email: 'trade@fashionwear.com', phone: '+44-20-5555-0104', country: 'UK', rating: 4.3, totalOrders: 67, balance: 3200 },
+  { id: 5, name: 'GrainMaster', email: 'bulk@grainmaster.com', phone: '+1-555-0105', country: 'Australia', rating: 4.7, totalOrders: 198, balance: 1100 },
+];
+
+export const USERS = [
+  { id: 1, name: 'Admin User', email: 'admin@arwaenterprises.com', role: 'admin', status: 'active', lastLogin: '2024-07-15T09:30:00', branch: 'All Branches', permissions: ['all'] },
+  { id: 2, name: 'Sarah Johnson', email: 'sarah@arwaenterprises.com', role: 'manager', status: 'active', lastLogin: '2024-07-15T08:15:00', branch: 'Main Store', permissions: ['inventory', 'reports', 'pos', 'users_view'] },
+  { id: 3, name: 'Mike Chen', email: 'mike@arwaenterprises.com', role: 'cashier', status: 'active', lastLogin: '2024-07-15T07:45:00', branch: 'Main Store', permissions: ['pos'] },
+  { id: 4, name: 'Aisha Patel', email: 'aisha@arwaenterprises.com', role: 'warehouse', status: 'active', lastLogin: '2024-07-14T16:20:00', branch: 'Warehouse A', permissions: ['inventory', 'receiving'] },
+  { id: 5, name: 'Carlos Rivera', email: 'carlos@arwaenterprises.com', role: 'accountant', status: 'active', lastLogin: '2024-07-15T09:00:00', branch: 'Main Store', permissions: ['reports', 'finances'] },
+  { id: 6, name: 'Emma Williams', email: 'emma@arwaenterprises.com', role: 'cashier', status: 'inactive', lastLogin: '2024-07-10T14:30:00', branch: 'Branch B', permissions: ['pos'] },
+];
+
+export const ORDERS = [
+  { id: 'ORD-2024-001', customer: 'John Smith', items: 5, total: 245.50, status: 'completed', date: '2024-07-15T10:30:00', payment: 'card' },
+  { id: 'ORD-2024-002', customer: 'Mary Davis', items: 2, total: 89.99, status: 'completed', date: '2024-07-15T11:15:00', payment: 'cash' },
+  { id: 'ORD-2024-003', customer: 'Robert Wilson', items: 8, total: 512.75, status: 'processing', date: '2024-07-15T11:45:00', payment: 'card' },
+  { id: 'ORD-2024-004', customer: 'Jennifer Brown', items: 3, total: 167.20, status: 'completed', date: '2024-07-15T12:00:00', payment: 'mobile' },
+  { id: 'ORD-2024-005', customer: 'Walk-in Customer', items: 1, total: 24.99, status: 'completed', date: '2024-07-15T12:30:00', payment: 'cash' },
+];
+
+export const SALES_DATA = [
+  { month: 'Jan', revenue: 42500, profit: 12800, orders: 342 },
+  { month: 'Feb', revenue: 38900, profit: 11200, orders: 298 },
+  { month: 'Mar', revenue: 51200, profit: 15600, orders: 412 },
+  { month: 'Apr', revenue: 48700, profit: 14100, orders: 389 },
+  { month: 'May', revenue: 56300, profit: 17800, orders: 451 },
+  { month: 'Jun', revenue: 61800, profit: 19200, orders: 498 },
+  { month: 'Jul', revenue: 58200, profit: 18100, orders: 467 },
+  { month: 'Aug', revenue: 64500, profit: 20300, orders: 521 },
+  { month: 'Sep', revenue: 59800, profit: 18700, orders: 479 },
+  { month: 'Oct', revenue: 67200, profit: 21500, orders: 542 },
+  { month: 'Nov', revenue: 72100, profit: 23400, orders: 581 },
+  { month: 'Dec', revenue: 85600, profit: 28900, orders: 692 },
+];
+
+export const WEEKLY_SALES = [
+  { day: 'Mon', sales: 4250, transactions: 34 },
+  { day: 'Tue', sales: 3890, transactions: 28 },
+  { day: 'Wed', sales: 5120, transactions: 41 },
+  { day: 'Thu', sales: 4670, transactions: 37 },
+  { day: 'Fri', sales: 6300, transactions: 52 },
+  { day: 'Sat', sales: 7850, transactions: 63 },
+  { day: 'Sun', sales: 5400, transactions: 44 },
+];
+
+export const CATEGORY_DATA = [
+  { name: 'Electronics', value: 35, color: '#4F46E5' },
+  { name: 'Pharmaceuticals', value: 22, color: '#7C3AED' },
+  { name: 'Groceries', value: 18, color: '#059669' },
+  { name: 'Clothing', value: 12, color: '#D97706' },
+  { name: 'Footwear', value: 8, color: '#DC2626' },
+  { name: 'Other', value: 5, color: '#6B7280' },
+];
+
+export const AI_ISSUES = [
+  { id: 1, type: 'performance', severity: 'warning', title: 'Database Query Slow', description: 'Product search queries averaging 2.3s. Index optimization recommended.', module: 'Inventory', detected: '2024-07-15T08:00:00', status: 'pending', autoFixable: true },
+  { id: 2, type: 'security', severity: 'critical', title: 'Weak Password Policy', description: 'Staff account "cashier03" using password matching common patterns.', module: 'User Management', detected: '2024-07-15T06:30:00', status: 'pending', autoFixable: false },
+  { id: 3, type: 'memory', severity: 'warning', title: 'Memory Usage Elevated', description: 'Application RAM usage at 78%. Possible memory leak in POS module.', module: 'POS System', detected: '2024-07-15T09:15:00', status: 'pending', autoFixable: true },
+  { id: 4, type: 'barcode', severity: 'info', title: 'Barcode Scanner Timeout', description: 'USB barcode scanner COM3 experienced 3 connection timeouts in 1 hour.', module: 'Barcode Engine', detected: '2024-07-15T07:45:00', status: 'resolved', autoFixable: true },
+  { id: 5, type: 'dependency', severity: 'warning', title: 'Outdated Package Detected', description: 'crypto-utils v2.1.0 has known vulnerability CVE-2024-1234. Update available.', module: 'Core System', detected: '2024-07-14T22:00:00', status: 'pending', autoFixable: true },
+  { id: 6, type: 'crash', severity: 'critical', title: 'POS Module Crash Predicted', description: 'AI predicts 87% crash probability in POS within 4 hours under current load.', module: 'POS System', detected: '2024-07-15T10:00:00', status: 'pending', autoFixable: false },
+];
+
+export const AI_METRICS = {
+  healthScore: 73,
+  performanceScore: 81,
+  securityScore: 68,
+  stabilityScore: 85,
+  uptimePercent: 99.2,
+  scansToday: 47,
+  issuesDetected: 6,
+  issuesResolved: 12,
+  cpuUsage: 34,
+  ramUsage: 78,
+  diskUsage: 45,
+  dbQueryAvg: 2.3,
+  apiResponseAvg: 145,
+  barcodeSuccessRate: 99.1,
+};
+
+export const REPAIR_HISTORY = [
+  { id: 1, action: 'Auto-optimized database indexes', module: 'Database', result: 'success', time: '2024-07-14T23:30:00', improvement: '+45% query speed' },
+  { id: 2, action: 'Restarted stuck background service', module: 'Sync Engine', result: 'success', time: '2024-07-14T21:15:00', improvement: 'Service restored' },
+  { id: 3, action: 'Cleared memory cache overflow', module: 'POS System', result: 'success', time: '2024-07-14T18:00:00', improvement: 'RAM -23%' },
+  { id: 4, action: 'Auto-patched crypto-utils v2.0.9', module: 'Dependencies', result: 'rolled_back', time: '2024-07-14T15:30:00', improvement: 'Compatibility issue' },
+  { id: 5, action: 'Fixed API timeout handler', module: 'Cloud Sync', result: 'success', time: '2024-07-13T11:00:00', improvement: 'Zero timeouts' },
+];
+
+export const NOTIFICATIONS = [
+  { id: 1, type: 'warning', message: 'Low stock: Organic Whole Milk (12 units remaining)', time: '2 min ago', read: false },
+  { id: 2, type: 'critical', message: 'AI Alert: Memory usage at 78% — action recommended', time: '15 min ago', read: false },
+  { id: 3, type: 'info', message: 'New purchase order from PharmaCo Ltd received', time: '1 hr ago', read: false },
+  { id: 4, type: 'success', message: 'Daily backup completed successfully', time: '3 hrs ago', read: true },
+  { id: 5, type: 'warning', message: 'Product "Amoxicillin 250mg" expiring in 77 days', time: '5 hrs ago', read: true },
+];

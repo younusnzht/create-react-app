@@ -1,0 +1,332 @@
+import React, { useState } from 'react';
+import {
+  CheckCircle, X, Zap, Shield, Crown, CreditCard,
+  Sparkles, ArrowRight, Check, AlertTriangle
+} from 'lucide-react';
+import { useApp } from '../../contexts/AppContext';
+import { SUBSCRIPTION_PLANS, SELF_HEALING_ADDON } from '../../data/mockData';
+
+const PLAN_ICONS = { basic: Shield, intermediate: Zap, super: Crown };
+
+export default function Subscription() {
+  const { subscription, setSubscription, showToast } = useApp();
+  const [billing, setBilling] = useState(subscription.billing);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(null);
+  const [showSelfHealModal, setShowSelfHealModal] = useState(false);
+
+  const plans = Object.values(SUBSCRIPTION_PLANS);
+
+  const handleUpgrade = (planId) => {
+    setSubscription(prev => ({ ...prev, plan: planId, billing }));
+    setShowUpgradeModal(null);
+    showToast(`Switched to ${SUBSCRIPTION_PLANS[planId].name} plan!`, 'success');
+  };
+
+  const toggleSelfHealing = () => {
+    const newVal = !subscription.selfHealing;
+    setSubscription(prev => ({ ...prev, selfHealing: newVal }));
+    setShowSelfHealModal(false);
+    showToast(newVal ? 'AI Self-Healing Engine activated!' : 'AI Self-Healing deactivated', newVal ? 'success' : 'info');
+  };
+
+  const currentPlan = SUBSCRIPTION_PLANS[subscription.plan];
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <h1>Subscription & Billing</h1>
+          <p>Manage your Arwa Inventory Pro subscription and AI add-ons</p>
+        </div>
+      </div>
+
+      {/* Current Plan */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(79,70,229,0.12), rgba(124,58,237,0.08))', border: '1px solid rgba(79,70,229,0.25)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: currentPlan.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {React.createElement(PLAN_ICONS[subscription.plan] || Zap, { size: 24, color: 'white' })}
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 900 }}>Arwa {currentPlan.name} Plan</h2>
+                <span className="badge badge-success">Active</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Next billing: {subscription.nextBilling} · {subscription.billing === 'monthly' ? 'Monthly' : 'Annual'} billing
+              </p>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--primary-light)' }}>
+              ${billing === 'yearly' ? currentPlan.yearlyPrice : currentPlan.monthlyPrice}
+              <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)' }}>/{billing === 'yearly' ? 'yr' : 'mo'}</span>
+            </div>
+            {subscription.selfHealing && (
+              <p style={{ fontSize: 12, color: 'var(--success)', fontWeight: 600 }}>
+                + $99/mo AI Self-Healing Add-on
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Billing Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 28 }}>
+        <span style={{ fontSize: 13, color: billing === 'monthly' ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: billing === 'monthly' ? 700 : 400 }}>Monthly</span>
+        <button
+          onClick={() => setBilling(b => b === 'monthly' ? 'yearly' : 'monthly')}
+          style={{
+            width: 50, height: 26, borderRadius: 13,
+            background: billing === 'yearly' ? 'var(--primary)' : 'var(--bg-tertiary)',
+            border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+          }}
+        >
+          <div style={{
+            width: 20, height: 20, borderRadius: '50%', background: 'white',
+            position: 'absolute', top: 3,
+            left: billing === 'yearly' ? 27 : 3,
+            transition: 'left 0.2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }} />
+        </button>
+        <span style={{ fontSize: 13, color: billing === 'yearly' ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: billing === 'yearly' ? 700 : 400 }}>
+          Yearly <span style={{ color: 'var(--success)', fontSize: 11, fontWeight: 700 }}>Save up to 17%</span>
+        </span>
+      </div>
+
+      {/* Plan Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 28 }}>
+        {plans.map(plan => {
+          const isActive = subscription.plan === plan.id;
+          const Icon = PLAN_ICONS[plan.id] || Zap;
+          const price = billing === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+          return (
+            <div
+              key={plan.id}
+              className={`plan-card ${isActive ? 'active' : ''} ${plan.popular ? 'popular' : ''}`}
+            >
+              {plan.popular && <div className="plan-popular-badge">POPULAR</div>}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: plan.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                  <Icon size={22} color="white" />
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{plan.name}</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {plan.id === 'basic' ? 'Perfect for small businesses' :
+                   plan.id === 'intermediate' ? 'Ideal for growing teams' :
+                   'Built for enterprises & franchises'}
+                </p>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <span style={{ fontSize: 36, fontWeight: 900, color: plan.color }}>${price}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/{billing === 'yearly' ? 'year' : 'month'}</span>
+                {billing === 'yearly' && (
+                  <p style={{ fontSize: 11, color: 'var(--success)', marginTop: 2 }}>Save ${(plan.monthlyPrice * 12) - plan.yearlyPrice}/yr</p>
+                )}
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                {plan.features.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                    <CheckCircle size={14} style={{ color: plan.color, flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{f}</span>
+                  </div>
+                ))}
+                {plan.locked?.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8, opacity: 0.4 }}>
+                    <X size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+              {isActive ? (
+                <button className="btn w-full" style={{ justifyContent: 'center', background: `${plan.color}22`, color: plan.color, border: `1px solid ${plan.color}44` }} disabled>
+                  <Check size={14} /> Current Plan
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary w-full"
+                  style={{ justifyContent: 'center', background: plan.gradient }}
+                  onClick={() => setShowUpgradeModal(plan.id)}
+                >
+                  {SUBSCRIPTION_PLANS[subscription.plan]?.monthlyPrice < plan.monthlyPrice ? 'Upgrade' : 'Downgrade'} to {plan.name}
+                  <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Self-Healing Add-on */}
+      <div style={{
+        background: subscription.selfHealing
+          ? 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.06))'
+          : 'linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.06))',
+        border: `2px solid ${subscription.selfHealing ? 'rgba(16,185,129,0.3)' : 'rgba(79,70,229,0.25)'}`,
+        borderRadius: 'var(--radius-lg)',
+        padding: 28,
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #4F46E5, #10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Sparkles size={22} color="white" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 800 }}>AI Self-Healing Engine</h3>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', color: 'white' }}>PREMIUM ADD-ON</span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Automatic bug fixing and system repair — the most advanced AI automation</p>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {SELF_HEALING_ADDON.features.slice(0, 6).map((f, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <Sparkles size={11} style={{ color: '#4F46E5', flexShrink: 0 }} />
+                  {f}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: subscription.selfHealing ? '#10B981' : 'var(--primary-light)', marginBottom: 4 }}>
+              $99<span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)' }}>/mo</span>
+            </div>
+            {!subscription.selfHealing && <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Billed separately</p>}
+            <button
+              className={`btn btn-lg ${subscription.selfHealing ? 'btn-danger' : 'btn-primary'}`}
+              style={{ minWidth: 160, justifyContent: 'center', background: subscription.selfHealing ? undefined : 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}
+              onClick={() => setShowSelfHealModal(true)}
+            >
+              {subscription.selfHealing ? (
+                <><X size={14} /> Deactivate</>
+              ) : (
+                <><Sparkles size={14} /> Activate Now</>
+              )}
+            </button>
+            {subscription.selfHealing && (
+              <div style={{ marginTop: 8 }}>
+                <span className="badge badge-success">
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', animation: 'pulse 2s infinite', display: 'inline-block', marginRight: 4 }} />
+                  Active
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Billing Info */}
+      <div className="grid-2">
+        <div className="card">
+          <div className="card-header"><span className="card-title">Payment Method</span></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, background: 'var(--bg-tertiary)', borderRadius: 8 }}>
+            <div style={{ width: 40, height: 28, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CreditCard size={16} style={{ color: '#60A5FA' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>•••• •••• •••• 4242</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Expires 12/2026</p>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }}>Update</button>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-header"><span className="card-title">Usage This Month</span></div>
+          {[
+            { label: 'AI Scans Used', value: '47', max: subscription.plan === 'basic' ? '10/day' : subscription.plan === 'intermediate' ? '100/day' : 'Unlimited' },
+            { label: 'Products', value: '12', max: currentPlan.products === -1 ? 'Unlimited' : currentPlan.products.toLocaleString() },
+            { label: 'Staff Accounts', value: '6', max: currentPlan.users === -1 ? 'Unlimited' : currentPlan.users },
+          ].map(u => (
+            <div key={u.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{u.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700 }}>{u.value} / {u.max}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Upgrade Confirmation Modal */}
+      {showUpgradeModal && (
+        <div className="modal-overlay" onClick={() => setShowUpgradeModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Confirm Plan Change</h3>
+              <button className="icon-btn" onClick={() => setShowUpgradeModal(null)}><X size={16} /></button>
+            </div>
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <p style={{ fontSize: 16, color: 'var(--text-secondary)', marginBottom: 20 }}>
+                Switch to <strong style={{ color: 'var(--text-primary)' }}>Arwa {SUBSCRIPTION_PLANS[showUpgradeModal].name} Plan</strong>?
+              </p>
+              <p style={{ fontSize: 28, fontWeight: 900, color: 'var(--primary-light)', marginBottom: 20 }}>
+                ${billing === 'yearly' ? SUBSCRIPTION_PLANS[showUpgradeModal].yearlyPrice : SUBSCRIPTION_PLANS[showUpgradeModal].monthlyPrice}
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)' }}>/{billing === 'yearly' ? 'year' : 'month'}</span>
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24 }}>Changes take effect immediately. Prorated credits will be applied.</p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="btn btn-secondary" onClick={() => setShowUpgradeModal(null)}>Cancel</button>
+                <button className="btn btn-primary" onClick={() => handleUpgrade(showUpgradeModal)}>
+                  <Check size={14} /> Confirm Change
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Self-Healing Modal */}
+      {showSelfHealModal && (
+        <div className="modal-overlay" onClick={() => setShowSelfHealModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {subscription.selfHealing ? 'Deactivate Self-Healing' : 'Activate AI Self-Healing Engine'}
+              </h3>
+              <button className="icon-btn" onClick={() => setShowSelfHealModal(false)}><X size={16} /></button>
+            </div>
+            {!subscription.selfHealing ? (
+              <div>
+                <div style={{ background: 'linear-gradient(135deg, rgba(79,70,229,0.1), rgba(124,58,237,0.1))', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Sparkles size={18} style={{ color: 'var(--primary-light)' }} />
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>What AI Self-Healing does</span>
+                  </div>
+                  {SELF_HEALING_ADDON.features.map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <Check size={12} style={{ color: '#10B981', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'var(--bg-tertiary)', borderRadius: 8, marginBottom: 20 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Monthly Add-on Cost</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary-light)' }}>$99/mo</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-secondary w-full" style={{ justifyContent: 'center' }} onClick={() => setShowSelfHealModal(false)}>Cancel</button>
+                  <button className="btn btn-primary w-full" style={{ justifyContent: 'center', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }} onClick={toggleSelfHealing}>
+                    <Sparkles size={14} /> Activate for $99/mo
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <AlertTriangle size={40} style={{ color: 'var(--warning)', marginBottom: 12 }} />
+                  <p style={{ fontSize: 14, marginBottom: 8 }}>Deactivating AI Self-Healing will disable all automatic repair features.</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24 }}>You will be charged $99 for the current billing period.</p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                    <button className="btn btn-secondary" onClick={() => setShowSelfHealModal(false)}>Keep Active</button>
+                    <button className="btn btn-danger" onClick={toggleSelfHealing}>Deactivate</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

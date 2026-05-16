@@ -1,0 +1,55 @@
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppProvider, useApp } from './contexts/AppContext';
+import Sidebar from './components/Layout/Sidebar';
+import Header from './components/Layout/Header';
+import Toast from './components/Layout/Toast';
+import Dashboard from './components/Dashboard/Dashboard';
+import Inventory from './components/Inventory/Inventory';
+import POS from './components/POS/POS';
+import BarcodeSystem from './components/Barcode/BarcodeSystem';
+import UserManagement from './components/Users/UserManagement';
+import Reports from './components/Reports/Reports';
+import AIGuardian from './components/AIGuardian/AIGuardian';
+import Subscription from './components/Subscription/Subscription';
+import Suppliers from './components/Suppliers/Suppliers';
+import Settings from './components/Settings/Settings';
+
+function AppLayout() {
+  const { theme } = useApp();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  return (
+    <div data-theme={theme} className="app-layout">
+      <Sidebar />
+      <div className="main-content">
+        <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        <div className="page-content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/pos" element={<POS />} />
+            <Route path="/barcode" element={<BarcodeSystem />} />
+            <Route path="/users" element={<UserManagement />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/ai-guardian" element={<AIGuardian />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </div>
+      </div>
+      <Toast />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppProvider>
+        <AppLayout />
+      </AppProvider>
+    </BrowserRouter>
+  );
+}
