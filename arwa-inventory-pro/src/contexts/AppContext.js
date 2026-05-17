@@ -5,6 +5,7 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState('dark');
+  const [colorTheme, setColorTheme] = useState('indigo');
   const [products, setProducts] = useState(PRODUCTS);
   const [users, setUsers] = useState(USERS);
   const [orders, setOrders] = useState(ORDERS);
@@ -67,7 +68,7 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      theme, toggleTheme,
+      theme, toggleTheme, colorTheme, setColorTheme,
       products, setProducts, addProduct, updateProduct, deleteProduct,
       users, setUsers,
       orders, setOrders,

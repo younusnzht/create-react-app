@@ -16,11 +16,11 @@ import Suppliers from './components/Suppliers/Suppliers';
 import Settings from './components/Settings/Settings';
 
 function AppLayout() {
-  const { theme } = useApp();
+  const { theme, colorTheme } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
   return (
-    <div data-theme={theme} className="app-layout">
+    <div data-theme={theme} data-color-theme={colorTheme} className="app-layout">
       <Sidebar />
       <div className="main-content">
         <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
