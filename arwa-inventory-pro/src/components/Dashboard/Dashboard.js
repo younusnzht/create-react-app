@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart,
@@ -11,8 +11,6 @@ import { useApp } from '../../contexts/AppContext';
 import { SALES_DATA, WEEKLY_SALES, CATEGORY_DATA } from '../../data/mockData';
 import { useNavigate } from 'react-router-dom';
 
-const fmt = (n) => n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n}`;
-const fmtNum = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n;
 
 const StatCard = ({ label, value, change, icon: Icon, color, bg, prefix = '' }) => (
   <div className="stat-card">
@@ -47,7 +45,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { products, aiMetrics, aiIssues, subscription } = useApp();
+  const { products, aiMetrics, aiIssues } = useApp();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState('monthly');
 
@@ -63,8 +61,6 @@ export default function Dashboard() {
   const topProducts = [...products]
     .sort((a, b) => (b.salePrice - b.purchasePrice) * b.stock - (a.salePrice - a.purchasePrice) * a.stock)
     .slice(0, 5);
-
-  const chartData = chartView === 'monthly' ? SALES_DATA : WEEKLY_SALES;
 
   return (
     <div>

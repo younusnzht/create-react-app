@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const icons = {

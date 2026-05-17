@@ -23,7 +23,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, unreadCount } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues } = useApp();
 
   const criticalIssues = aiIssues.filter(i => i.severity === 'critical' && i.status === 'pending').length;
 
@@ -52,7 +52,6 @@ export default function Sidebar() {
 
           const Icon = item.icon;
           const isAI = item.path === '/ai-guardian';
-          const isSub = item.path === '/subscription';
 
           return (
             <NavLink

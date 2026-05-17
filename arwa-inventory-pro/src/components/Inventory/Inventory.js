@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Search, Filter, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { CATEGORIES, SUPPLIERS } from '../../data/mockData';
 
@@ -123,7 +123,7 @@ function ProductModal({ product, onClose, onSave }) {
 }
 
 export default function Inventory() {
-  const { products, addProduct, updateProduct, deleteProduct, showToast } = useApp();
+  const { products, addProduct, updateProduct, deleteProduct } = useApp();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');

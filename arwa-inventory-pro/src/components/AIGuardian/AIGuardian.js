@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import {
   Bot, Shield, Zap, Activity, AlertTriangle, CheckCircle, Clock,
-  Play, RotateCcw, Lock, TrendingUp, Database, Cpu, HardDrive,
-  Server, RefreshCw, Eye, ChevronRight, Sparkles
+  Play, RotateCcw, Lock, Database, Cpu, HardDrive,
+  Server, RefreshCw, ChevronRight, Sparkles
 } from 'lucide-react';
-import { RadialBarChart, RadialBar, ResponsiveContainer, Tooltip } from 'recharts';
 import { useApp } from '../../contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,20 +33,6 @@ const MetricCard = ({ label, value, unit, color, icon: Icon, subtext }) => (
   </div>
 );
 
-const ScoreGauge = ({ score, label, color }) => {
-  const data = [{ value: score, fill: color }];
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <ResponsiveContainer width="100%" height={100}>
-        <RadialBarChart cx="50%" cy="80%" innerRadius="60%" outerRadius="90%" startAngle={180} endAngle={0} data={[{ value: 100, fill: 'var(--bg-tertiary)' }, { value: score, fill: color }]}>
-          <RadialBar dataKey="value" />
-        </RadialBarChart>
-      </ResponsiveContainer>
-      <div style={{ marginTop: -20, fontSize: 22, fontWeight: 900, color }}>{score}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
-    </div>
-  );
-};
 
 export default function AIGuardian() {
   const { aiMetrics, aiIssues, repairHistory, subscription, resolveIssue, runAIScan, showToast } = useApp();

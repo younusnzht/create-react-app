@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Sun, Moon, Menu, X, Check, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Search, Bell, Sun, Moon, X, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useLocation } from 'react-router-dom';
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { QrCode, Zap, Printer, Download, Search, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { QrCode, Zap, Printer, CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const BARCODE_HISTORY = [
