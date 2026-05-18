@@ -14,6 +14,8 @@ const PAGE_TITLES = {
   '/ai-guardian': 'AI Dev Guardian',
   '/subscription': 'Subscription & Billing',
   '/settings': 'Settings',
+  '/online-orders': 'Online Orders',
+  '/customers': 'Customer Management',
 };
 
 const NotifIcon = ({ type }) => {

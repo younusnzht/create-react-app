@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const SettingRow = ({ label, desc, children }) => (
@@ -196,29 +196,38 @@ const COLOR_THEMES = [
   { id: 'ocean', label: 'Ocean', colors: ['#0284C7', '#0891B2'] },
 ];
 
-export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, showToast } = useApp();
-  const [settings, setSettings] = useState({
-    companyName: 'Arwa Enterprises',
-    currency: 'USD',
-    timezone: 'UTC',
-    language: 'en',
-    lowStockAlerts: true,
-    expiryAlerts: true,
-    emailNotifications: true,
-    smsAlerts: false,
-    aiAlerts: true,
-    autoBackup: true,
-    backupFrequency: 'daily',
-    cloudSync: true,
-    twoFactor: false,
-    sessionTimeout: '30',
-    receiptPrinter: 'thermal',
-    autoUpdatePrice: false,
-    multiCurrency: false,
-  });
+const defaultSettings = {
+  companyName: 'Arwa Enterprises',
+  currency: 'USD',
+  timezone: 'UTC',
+  language: 'en',
+  lowStockAlerts: true,
+  expiryAlerts: true,
+  emailNotifications: true,
+  smsAlerts: false,
+  aiAlerts: true,
+  autoBackup: true,
+  backupFrequency: 'daily',
+  cloudSync: true,
+  twoFactor: false,
+  sessionTimeout: '30',
+  receiptPrinter: 'thermal',
+  autoUpdatePrice: false,
+  multiCurrency: false,
+};
 
-  const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
+export default function Settings() {
+  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency } = useApp();
+  const [settings, setSettings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
+  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+
+  const set = (k, v) => {
+    setSettings(s => ({ ...s, [k]: v }));
+    if (k === 'currency') setCurrency(v);
+  };
 
   const SECTIONS = [
     {
@@ -270,7 +279,11 @@ export default function Settings() {
           <h1>Settings</h1>
           <p>Configure Arwa Inventory Pro for your business</p>
         </div>
-        <button className="btn btn-primary" onClick={() => showToast('Settings saved successfully')}>
+        <button className="btn btn-primary" onClick={() => {
+          localStorage.setItem('arwa_settings', JSON.stringify(settings));
+          setCurrency(settings.currency);
+          showToast('Settings saved successfully');
+        }}>
           <Save size={14} /> Save Changes
         </button>
       </div>
@@ -384,17 +397,58 @@ export default function Settings() {
             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#EF4444' }}>Danger Zone</h3>
           </div>
           <SettingRow label="Clear All Data" desc="Permanently delete all inventory, orders, and customer data">
-            <button className="btn btn-danger btn-sm" onClick={() => showToast('This action requires admin confirmation', 'warning')}>
+            <button className="btn btn-danger btn-sm" onClick={() => { setShowDeleteModal(true); setDeleteInput(''); }}>
               Clear Data
             </button>
           </SettingRow>
           <SettingRow label="Reset to Factory Defaults" desc="Reset all settings to default values">
-            <button className="btn btn-danger btn-sm" onClick={() => showToast('Settings reset to defaults', 'info')}>
+            <button className="btn btn-danger btn-sm" onClick={() => {
+              setSettings(defaultSettings);
+              localStorage.setItem('arwa_settings', '');
+              showToast('Settings reset to defaults', 'info');
+            }}>
               Reset Settings
             </button>
           </SettingRow>
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title" style={{ color: '#EF4444' }}>Clear All Data</h2>
+              <button className="icon-btn" onClick={() => setShowDeleteModal(false)}><X size={16} /></button>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              This will permanently delete all inventory, orders, and customer data. This action cannot be undone.
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              Type <strong style={{ color: 'var(--text-primary)' }}>DELETE</strong> to confirm:
+            </p>
+            <input
+              className="form-control"
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              placeholder="Type DELETE here"
+              style={{ marginBottom: 20, borderColor: deleteInput && deleteInput !== 'DELETE' ? 'var(--danger)' : undefined }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <button
+                className="btn btn-danger"
+                disabled={deleteInput !== 'DELETE'}
+                onClick={() => {
+                  Object.keys(localStorage).filter(k => k.startsWith('arwa_')).forEach(k => localStorage.removeItem(k));
+                  window.location.reload();
+                }}
+              >
+                I understand, delete all data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

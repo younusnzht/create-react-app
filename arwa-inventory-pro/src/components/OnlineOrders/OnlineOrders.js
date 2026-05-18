@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Clock, CheckCircle, Truck, XCircle, Globe, ChevronDown, ChevronUp, RefreshCw, MapPin, User, DollarSign } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { ONLINE_ORDERS } from '../../data/mockData';
 
 const PLATFORMS = [
   { id: 'all', label: 'All Orders', color: 'var(--primary-light)' },
@@ -32,6 +31,9 @@ const PLATFORM_LOGOS = {
   phone:         { bg: '#8B5CF6', letter: 'P', text: 'Phone/Walk-in' },
 };
 
+// FIX 9: Currency symbol helper
+const sym = (code) => ({ USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', PKR: '₨', INR: '₹', AED: 'د.إ' }[code] || code + ' ');
+
 function PlatformBadge({ platform }) {
   const p = PLATFORM_LOGOS[platform] || PLATFORM_LOGOS.website;
   return (
@@ -44,7 +46,7 @@ function PlatformBadge({ platform }) {
   );
 }
 
-function OrderCard({ order, onStatusChange }) {
+function OrderCard({ order, onStatusChange, currencyCode }) {
   const [expanded, setExpanded] = useState(false);
   const status = STATUS_CONFIG[order.status] || STATUS_CONFIG.new;
   const StatusIcon = status.icon;
@@ -90,8 +92,9 @@ function OrderCard({ order, onStatusChange }) {
             <Clock size={11} />
             {order.time}
           </div>
+          {/* FIX 9: Use currency symbol */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 800, color: 'var(--success)', marginLeft: 'auto' }}>
-            <DollarSign size={13} />{order.total.toFixed(2)}
+            <DollarSign size={13} />{sym(currencyCode)}{order.total.toFixed(2)}
           </div>
         </div>
 
@@ -109,7 +112,8 @@ function OrderCard({ order, onStatusChange }) {
             {order.items.map((it, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: i < order.items.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <span>{it.qty}× {it.name}{it.note ? <span style={{ color: 'var(--text-muted)' }}> ({it.note})</span> : ''}</span>
-                <span style={{ fontWeight: 600 }}>${(it.price * it.qty).toFixed(2)}</span>
+                {/* FIX 9: Use currency symbol in expanded line items */}
+                <span style={{ fontWeight: 600 }}>{sym(currencyCode)}{(it.price * it.qty).toFixed(2)}</span>
               </div>
             ))}
             {order.address && (
@@ -149,8 +153,8 @@ function OrderCard({ order, onStatusChange }) {
 }
 
 export default function OnlineOrders() {
-  const { showToast } = useApp();
-  const [orders, setOrders] = useState(ONLINE_ORDERS);
+  // FIX 5: Use context onlineOrders + updateOnlineOrderStatus + currency
+  const { onlineOrders: orders, updateOnlineOrderStatus, addOnlineOrder, showToast, currency } = useApp();
   const [activePlatform, setActivePlatform] = useState('all');
   const [activeStatus, setActiveStatus] = useState('all');
   const [showNewModal, setShowNewModal] = useState(false);
@@ -162,26 +166,38 @@ export default function OnlineOrders() {
     return platformOk && statusOk;
   });
 
+  // FIX 6 + FIX 7: Wire to context and show toast on fulfillment
   const handleStatusChange = (id, newStatus) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
+    updateOnlineOrderStatus(id, newStatus);
     showToast(`Order #${id} → ${STATUS_CONFIG[newStatus]?.label}`, newStatus === 'cancelled' ? 'warning' : 'success');
+    // FIX 7: Inventory deduction acknowledgement on fulfillment
+    if (newStatus === 'delivered' || newStatus === 'pickup') {
+      showToast('Order fulfilled. Tap to deduct inventory.', 'info');
+    }
   };
 
   const counts = Object.fromEntries(
     Object.keys(STATUS_CONFIG).map(s => [s, orders.filter(o => o.status === s).length])
   );
 
+  // FIX 8 + FIX 10: Validate $0 and use addOnlineOrder from context
   const addNewOrder = (e) => {
     e.preventDefault();
     const id = `${Date.now()}`.slice(-6);
     const total = newOrder.items.reduce((s, it) => s + it.price * it.qty, 0);
-    setOrders(prev => [{
+    // FIX 8: Warn on $0 total
+    if (total === 0) {
+      showToast('Order total is $0 — please add item prices', 'warning');
+    }
+    const orderObj = {
       id, platform: newOrder.platform, customer: newOrder.customer,
       type: newOrder.type, status: 'new',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       total, items: newOrder.items.filter(it => it.name),
       note: newOrder.note, address: '',
-    }, ...prev]);
+    };
+    // FIX 10: Use addOnlineOrder from context
+    addOnlineOrder(orderObj);
     showToast(`New order #${id} created`, 'success');
     setShowNewModal(false);
     setNewOrder({ customer: '', platform: 'phone', type: 'pickup', note: '', items: [{ name: '', qty: 1, price: 0 }] });
@@ -250,7 +266,7 @@ export default function OnlineOrders() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
           {filtered.map(o => (
-            <OrderCard key={o.id} order={o} onStatusChange={handleStatusChange} />
+            <OrderCard key={o.id} order={o} onStatusChange={handleStatusChange} currencyCode={currency} />
           ))}
         </div>
       )}
@@ -339,8 +355,9 @@ export default function OnlineOrders() {
                 <input className="form-control" placeholder="Allergies, special instructions..." value={newOrder.note} onChange={e => setNewOrder(o => ({ ...o, note: e.target.value }))} />
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                {/* FIX 9: Currency symbol in modal total */}
                 <span style={{ fontSize: 14, fontWeight: 700 }}>
-                  Total: ${newOrder.items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2)}
+                  Total: {sym(currency)}{newOrder.items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2)}
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setShowNewModal(false)}>Cancel</button>

@@ -10,6 +10,11 @@ const STATUS_CONFIG = {
   expiring_soon: { label: 'Expiring Soon', cls: 'badge-info' },
 };
 
+const getCurrencySymbol = (code) => {
+  const s = { USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', AUD: 'A$', JPY: '¥', INR: '₹', PKR: '₨', AED: 'د.إ', SAR: '﷼' };
+  return s[code] || code + ' ';
+};
+
 function ProductModal({ product, onClose, onSave }) {
   const [form, setForm] = useState(product || {
     name: '', sku: '', barcode: '', category: CATEGORIES[0],
@@ -123,7 +128,7 @@ function ProductModal({ product, onClose, onSave }) {
 }
 
 export default function Inventory() {
-  const { products, addProduct, updateProduct, deleteProduct } = useApp();
+  const { products, addProduct, updateProduct, deleteProduct, currency, showToast } = useApp();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -132,9 +137,10 @@ export default function Inventory() {
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
   const PER_PAGE = 8;
 
-  const filtered = useMemo(() => {
+  const filteredAndSorted = useMemo(() => {
     let list = products.filter(p => {
       const q = search.toLowerCase();
       return (
@@ -154,8 +160,8 @@ export default function Inventory() {
     return list;
   }, [products, search, categoryFilter, statusFilter, sortKey, sortDir]);
 
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated = filteredAndSorted.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.ceil(filteredAndSorted.length / PER_PAGE);
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -174,6 +180,93 @@ export default function Inventory() {
 
   const categories = ['All', ...new Set(products.map(p => p.category))];
 
+  // Pagination sliding window
+  const getPageNumbers = () => {
+    if (totalPages <= 1) return [];
+    const pages = [];
+    const addPage = (n) => { if (!pages.includes(n) && n >= 1 && n <= totalPages) pages.push(n); };
+
+    addPage(1);
+    if (page - 2 > 2) pages.push('...');
+    addPage(page - 1);
+    addPage(page);
+    addPage(page + 1);
+    if (page + 2 < totalPages - 1) pages.push('ellipsis-end');
+    addPage(totalPages);
+
+    // Deduplicate while preserving order
+    const seen = new Set();
+    return pages.filter(p => {
+      if (p === '...' || p === 'ellipsis-end') return true;
+      if (seen.has(p)) return false;
+      seen.add(p);
+      return true;
+    });
+  };
+
+  // CSV Export
+  const handleExport = () => {
+    const headers = ['Name', 'SKU', 'Barcode', 'Category', 'Supplier', 'Purchase Price', 'Sale Price', 'Stock', 'Min Stock', 'Expiry', 'Warehouse', 'Status'];
+    const rows = filteredAndSorted.map(p => [p.name, p.sku, p.barcode, p.category, p.supplier, p.purchasePrice, p.salePrice, p.stock, p.minStock, p.expiry || '', p.warehouse, p.status]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'inventory.csv'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Inventory exported as CSV');
+  };
+
+  // Multi-select helpers
+  const visibleIds = paginated.map(p => p.id);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) {
+      setSelectedIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds(prev => [...new Set([...prev, ...visibleIds])]);
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkDelete = () => {
+    if (!window.confirm(`Delete ${selectedIds.length} selected product(s)?`)) return;
+    selectedIds.forEach(id => deleteProduct(id));
+    setSelectedIds([]);
+  };
+
+  const handleBulkStatus = (status) => {
+    selectedIds.forEach(id => updateProduct(id, { status }));
+    setSelectedIds([]);
+    showToast(`Updated ${selectedIds.length} product(s)`);
+  };
+
+  // Expiry helpers
+  const now = new Date();
+  const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+  const renderExpiry = (expiry) => {
+    if (!expiry) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+    const d = new Date(expiry);
+    if (d < now) {
+      return <span className="badge badge-danger">Expired</span>;
+    }
+    if (d < in90Days) {
+      return (
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{d.toLocaleDateString()}</span>
+          <span className="badge badge-warning">Expiring</span>
+        </span>
+      );
+    }
+    return <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{d.toLocaleDateString()}</span>;
+  };
+
+  const currSym = getCurrencySymbol(currency);
+
   return (
     <div>
       <div className="page-header">
@@ -185,7 +278,7 @@ export default function Inventory() {
           <button className="btn btn-secondary btn-sm">
             <Upload size={13} /> Import CSV
           </button>
-          <button className="btn btn-secondary btn-sm">
+          <button className="btn btn-secondary btn-sm" onClick={handleExport}>
             <Download size={13} /> Export
           </button>
           <button className="btn btn-primary" onClick={() => { setEditProduct(null); setShowModal(true); }}>
@@ -233,11 +326,38 @@ export default function Inventory() {
           </select>
         </div>
 
+        {/* Bulk action bar */}
+        {selectedIds.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 12, background: 'rgba(79,70,229,0.08)', borderRadius: 8, border: '1px solid rgba(79,70,229,0.2)' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary-light)' }}>{selectedIds.length} selected:</span>
+            <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>
+              <Trash2 size={12} /> Bulk Delete
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => handleBulkStatus('active')}>
+              Mark Active
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => handleBulkStatus('out_of_stock')}>
+              Mark Out of Stock
+            </button>
+            <button className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setSelectedIds([])}>
+              Clear
+            </button>
+          </div>
+        )}
+
         {/* Table */}
         <div className="table-wrapper">
           <table>
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAll}
+                    title="Select all visible"
+                  />
+                </th>
                 <th onClick={() => handleSort('name')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                   Product <SortIcon k="name" />
                 </th>
@@ -259,16 +379,24 @@ export default function Inventory() {
             <tbody>
               {paginated.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>
+                  <td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 40 }}>
                     No products found
                   </td>
                 </tr>
               ) : paginated.map(p => {
                 const st = stockStatus(p);
                 const cfg = STATUS_CONFIG[st] || STATUS_CONFIG.active;
-                const margin = ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0);
+                const margin = p.salePrice > 0 ? ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0) : 0;
+                const isSelected = selectedIds.includes(p.id);
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} style={isSelected ? { background: 'rgba(79,70,229,0.06)' } : {}}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(p.id)}
+                      />
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -286,7 +414,7 @@ export default function Inventory() {
                     </td>
                     <td><span className="chip">{p.category}</span></td>
                     <td>
-                      <div style={{ fontWeight: 700 }}>${p.salePrice.toFixed(2)}</div>
+                      <div style={{ fontWeight: 700 }}>{currSym}{p.salePrice.toFixed(2)}</div>
                       <div style={{ fontSize: 11, color: 'var(--success)' }}>{margin}% margin</div>
                     </td>
                     <td>
@@ -299,9 +427,7 @@ export default function Inventory() {
                       <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Min: {p.minStock}</div>
                     </td>
                     <td><span className={`badge ${cfg.cls}`}>{cfg.label}</span></td>
-                    <td style={{ fontSize: 12, color: p.expiry ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                      {p.expiry ? p.expiry : '—'}
-                    </td>
+                    <td>{renderExpiry(p.expiry)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
@@ -331,13 +457,17 @@ export default function Inventory() {
         {totalPages > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}
+              Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filteredAndSorted.length)} of {filteredAndSorted.length}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               <button className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
-                <button key={n} className={`btn btn-sm ${page === n ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPage(n)}>{n}</button>
-              ))}
+              {getPageNumbers().map((n, i) =>
+                (n === '...' || n === 'ellipsis-end') ? (
+                  <span key={`ellipsis-${i}`} style={{ padding: '0 4px', display: 'flex', alignItems: 'center', color: 'var(--text-muted)', fontSize: 13 }}>…</span>
+                ) : (
+                  <button key={n} className={`btn btn-sm ${page === n ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPage(n)}>{n}</button>
+                )
+              )}
               <button className="btn btn-secondary btn-sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
             </div>
           </div>

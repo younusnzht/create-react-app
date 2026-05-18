@@ -7,31 +7,93 @@ import { Download, TrendingUp, DollarSign, ShoppingCart, Package } from 'lucide-
 import { useApp } from '../../contexts/AppContext';
 import { SALES_DATA, WEEKLY_SALES } from '../../data/mockData';
 
-const CustomTooltip = ({ active, payload, label }) => {
+const COLORS = ['#4F46E5', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0284C7', '#06B6D4', '#8B5CF6'];
+
+const getCurrencySymbol = (code) => {
+  const s = { USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', AUD: 'A$', JPY: '¥', INR: '₹', PKR: '₨', AED: 'د.إ', SAR: '﷼' };
+  return s[code] || code + ' ';
+};
+
+const CustomTooltip = ({ active, payload, label, currencySymbol }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ fontSize: 13, color: p.color, fontWeight: 600 }}>
-          {p.name}: {p.name === 'orders' ? p.value : `$${p.value?.toLocaleString()}`}
+          {p.name}: {(p.name === 'orders' || p.name === 'transactions') ? p.value : `${currencySymbol}${p.value?.toLocaleString()}`}
         </p>
       ))}
     </div>
   );
 };
 
+const handleExportCSV = (data, filename) => {
+  if (!data || !data.length) return;
+  const keys = Object.keys(data[0] || {});
+  const csv = [keys.join(','), ...data.map(row => keys.map(k => `"${row[k] ?? ''}"`).join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 export default function Reports() {
-  const { products, orders } = useApp();
+  const { products, orders, currency, showToast } = useApp();
   const [period, setPeriod] = useState('yearly');
   const [activeReport, setActiveReport] = useState('sales');
+
+  const currencySymbol = getCurrencySymbol(currency);
 
   const totalRevenue = SALES_DATA.reduce((s, m) => s + m.revenue, 0);
   const totalProfit = SALES_DATA.reduce((s, m) => s + m.profit, 0);
   const totalOrders = SALES_DATA.reduce((s, m) => s + m.orders, 0);
   const profitMargin = ((totalProfit / totalRevenue) * 100).toFixed(1);
 
-  const data = period === 'yearly' ? SALES_DATA : WEEKLY_SALES;
+  const chartData = period === 'yearly' ? SALES_DATA : WEEKLY_SALES;
+
+  // Inventory stats derived from real products
+  const totalProducts = products.length;
+  const totalInventoryValue = products.reduce((s, p) => s + p.stock * p.purchasePrice, 0);
+  const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= p.minStock).length;
+  const outOfStockCount = products.filter(p => p.stock === 0).length;
+
+  // Category breakdown from real products
+  const categoryData = Object.entries(
+    products.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc; }, {})
+  ).map(([name, value], i) => ({ name, value, color: COLORS[i % COLORS.length] }));
+
+  // Recent transactions: real orders sorted by date desc, 10 most recent
+  const recentTransactions = [...orders]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 10);
+
+  // Current report data for CSV export
+  const getExportData = () => {
+    if (activeReport === 'sales') return chartData;
+    if (activeReport === 'inventory') return products.map(p => ({
+      name: p.name,
+      category: p.category,
+      stock: p.stock,
+      value: (p.stock * p.purchasePrice).toFixed(2),
+      margin: ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0) + '%',
+      status: p.stock === 0 ? 'Out of Stock' : p.stock <= p.minStock ? 'Low Stock' : 'Good',
+      supplier: p.supplier,
+    }));
+    if (activeReport === 'profit') return SALES_DATA;
+    if (activeReport === 'orders') return recentTransactions;
+    return chartData;
+  };
+
+  const handlePrintPDF = () => {
+    showToast('Use your browser\'s "Save as PDF" option in the print dialog', 'info');
+    window.print();
+  };
+
+  const tooltipWithCurrency = (props) => <CustomTooltip {...props} currencySymbol={currencySymbol} />;
 
   return (
     <div>
@@ -41,16 +103,16 @@ export default function Reports() {
           <p>Comprehensive business intelligence and performance insights</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm"><Download size={13} /> Export PDF</button>
-          <button className="btn btn-secondary btn-sm"><Download size={13} /> Export Excel</button>
+          <button className="btn btn-secondary btn-sm" onClick={handlePrintPDF}><Download size={13} /> Export PDF</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => handleExportCSV(getExportData(), `${activeReport}-report`)}><Download size={13} /> Export CSV</button>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { label: 'Annual Revenue', value: `$${(totalRevenue / 1000).toFixed(0)}k`, change: '+18.3%', color: '#10B981', icon: DollarSign, bg: 'rgba(16,185,129,0.12)' },
-          { label: 'Annual Profit', value: `$${(totalProfit / 1000).toFixed(0)}k`, change: '+22.1%', color: '#4F46E5', icon: TrendingUp, bg: 'rgba(79,70,229,0.12)' },
+          { label: 'Annual Revenue', value: `${currencySymbol}${(totalRevenue / 1000).toFixed(0)}k`, change: '+18.3%', color: '#10B981', icon: DollarSign, bg: 'rgba(16,185,129,0.12)' },
+          { label: 'Annual Profit', value: `${currencySymbol}${(totalProfit / 1000).toFixed(0)}k`, change: '+22.1%', color: '#4F46E5', icon: TrendingUp, bg: 'rgba(79,70,229,0.12)' },
           { label: 'Total Orders', value: totalOrders.toLocaleString(), change: '+14.7%', color: '#06B6D4', icon: ShoppingCart, bg: 'rgba(6,182,212,0.12)' },
           { label: 'Profit Margin', value: `${profitMargin}%`, change: '+2.4%', color: '#F59E0B', icon: Package, bg: 'rgba(245,158,11,0.12)' },
         ].map(k => (
@@ -92,7 +154,7 @@ export default function Reports() {
           <div className="card">
             <div className="card-header"><span className="card-title">Revenue vs Profit Trend</span></div>
             <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={data}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="revG" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.25} />
@@ -105,23 +167,33 @@ export default function Reports() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey={period === 'yearly' ? 'month' : 'day'} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${(v / 1000).toFixed(0)}k`} />
+                <Tooltip content={tooltipWithCurrency} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#4F46E5" fill="url(#revG)" strokeWidth={2.5} dot={false} />
-                <Area type="monotone" dataKey="profit" name="Profit" stroke="#10B981" fill="url(#profG)" strokeWidth={2.5} dot={false} />
+                {period === 'yearly' ? (
+                  <>
+                    <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#4F46E5" fill="url(#revG)" strokeWidth={2.5} dot={false} />
+                    <Area type="monotone" dataKey="profit" name="Profit" stroke="#10B981" fill="url(#profG)" strokeWidth={2.5} dot={false} />
+                  </>
+                ) : (
+                  <Area type="monotone" dataKey="sales" name="Sales" stroke="#4F46E5" fill="url(#revG)" strokeWidth={2.5} dot={false} />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>
           <div className="card">
             <div className="card-header"><span className="card-title">Order Volume</span></div>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={data}>
+              <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey={period === 'yearly' ? 'month' : 'day'} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="orders" name="orders" fill="#06B6D4" radius={[4,4,0,0]} />
+                <Tooltip content={tooltipWithCurrency} />
+                {period === 'yearly' ? (
+                  <Bar dataKey="orders" name="orders" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                ) : (
+                  <Bar dataKey="transactions" name="transactions" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                )}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -129,43 +201,76 @@ export default function Reports() {
       )}
 
       {activeReport === 'inventory' && (
-        <div className="card">
-          <div className="card-header"><span className="card-title">Inventory Status Report</span></div>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Category</th>
-                  <th>Current Stock</th>
-                  <th>Value ($)</th>
-                  <th>Margin</th>
-                  <th>Status</th>
-                  <th>Supplier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(p => {
-                  const value = (p.stock * p.purchasePrice).toFixed(2);
-                  const margin = ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0);
-                  return (
-                    <tr key={p.id}>
-                      <td style={{ fontWeight: 600 }}>{p.name}</td>
-                      <td><span className="chip">{p.category}</span></td>
-                      <td style={{ fontWeight: 700 }}>{p.stock.toLocaleString()}</td>
-                      <td>${parseFloat(value).toLocaleString()}</td>
-                      <td style={{ color: 'var(--success)', fontWeight: 700 }}>{margin}%</td>
-                      <td>
-                        <span className={`badge ${p.stock === 0 ? 'badge-danger' : p.stock <= p.minStock ? 'badge-warning' : 'badge-success'}`}>
-                          {p.stock === 0 ? 'Out of Stock' : p.stock <= p.minStock ? 'Low Stock' : 'Good'}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.supplier}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Inventory summary stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            {[
+              { label: 'Total Products', value: totalProducts, color: '#4F46E5' },
+              { label: 'Total Value', value: `${currencySymbol}${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: '#10B981' },
+              { label: 'Low Stock', value: lowStockCount, color: '#F59E0B' },
+              { label: 'Out of Stock', value: outOfStockCount, color: '#EF4444' },
+            ].map(s => (
+              <div key={s.label} className="card" style={{ textAlign: 'center', padding: 16 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{s.label}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: s.color }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Category breakdown */}
+          {categoryData.length > 0 && (
+            <div className="card">
+              <div className="card-header"><span className="card-title">Category Breakdown</span></div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '8px 0' }}>
+                {categoryData.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: 3, background: c.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{c.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginLeft: 'auto' }}>{c.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="card">
+            <div className="card-header"><span className="card-title">Inventory Status Report</span></div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Current Stock</th>
+                    <th>Value ({currencySymbol})</th>
+                    <th>Margin</th>
+                    <th>Status</th>
+                    <th>Supplier</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(p => {
+                    const value = (p.stock * p.purchasePrice).toFixed(2);
+                    const margin = ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0);
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ fontWeight: 600 }}>{p.name}</td>
+                        <td><span className="chip">{p.category}</span></td>
+                        <td style={{ fontWeight: 700 }}>{p.stock.toLocaleString()}</td>
+                        <td>{currencySymbol}{parseFloat(value).toLocaleString()}</td>
+                        <td style={{ color: 'var(--success)', fontWeight: 700 }}>{margin}%</td>
+                        <td>
+                          <span className={`badge ${p.stock === 0 ? 'badge-danger' : p.stock <= p.minStock ? 'badge-warning' : 'badge-success'}`}>
+                            {p.stock === 0 ? 'Out of Stock' : p.stock <= p.minStock ? 'Low Stock' : 'Good'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.supplier}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -177,11 +282,11 @@ export default function Reports() {
             <BarChart data={SALES_DATA} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={tooltipWithCurrency} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
-              <Bar dataKey="revenue" name="Revenue" fill="#4F46E5" radius={[3,3,0,0]} />
-              <Bar dataKey="profit" name="Profit" fill="#10B981" radius={[3,3,0,0]} />
+              <Bar dataKey="revenue" name="Revenue" fill="#4F46E5" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="profit" name="Profit" fill="#10B981" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -190,36 +295,40 @@ export default function Reports() {
       {activeReport === 'orders' && (
         <div className="card">
           <div className="card-header"><span className="card-title">Recent Transactions</span></div>
-          <table>
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Items</th>
-                <th>Total</th>
-                <th>Payment</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map(o => (
-                <tr key={o.id}>
-                  <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{o.id}</td>
-                  <td style={{ fontWeight: 600 }}>{o.customer}</td>
-                  <td>{o.items}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--success)' }}>${o.total.toFixed(2)}</td>
-                  <td><span className="chip" style={{ textTransform: 'capitalize' }}>{o.payment}</span></td>
-                  <td>
-                    <span className={`badge ${o.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(o.date).toLocaleString()}</td>
+          {recentTransactions.length === 0 ? (
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0' }}>No transactions yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recentTransactions.map(o => (
+                  <tr key={o.id}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{o.id}</td>
+                    <td style={{ fontWeight: 600 }}>{o.customer}</td>
+                    <td>{o.items}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--success)' }}>{currencySymbol}{o.total.toFixed(2)}</td>
+                    <td><span className="chip" style={{ textTransform: 'capitalize' }}>{o.payment}</span></td>
+                    <td>
+                      <span className={`badge ${o.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
+                        {o.status}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(o.date).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>

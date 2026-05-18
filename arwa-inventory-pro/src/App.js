@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
@@ -15,10 +15,15 @@ import Subscription from './components/Subscription/Subscription';
 import Suppliers from './components/Suppliers/Suppliers';
 import Settings from './components/Settings/Settings';
 import OnlineOrders from './components/OnlineOrders/OnlineOrders';
+import Login from './components/Auth/Login';
+import ErrorBoundary from './components/ErrorBoundary';
+import CustomerManagement from './components/Customers/CustomerManagement';
 
 function AppLayout() {
-  const { theme, colorTheme } = useApp();
+  const { theme, colorTheme, isAuthenticated } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <div data-theme={theme} data-color-theme={colorTheme} className="app-layout">
@@ -37,6 +42,7 @@ function AppLayout() {
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/online-orders" element={<OnlineOrders />} />
+            <Route path="/customers" element={<CustomerManagement />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
@@ -46,11 +52,28 @@ function AppLayout() {
   );
 }
 
+function AppRouter() {
+  const { theme, colorTheme } = useApp();
+
+  return (
+    <div data-theme={theme} data-color-theme={colorTheme} style={{ minHeight: '100vh' }}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={
+          <ErrorBoundary>
+            <AppLayout />
+          </ErrorBoundary>
+        } />
+      </Routes>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AppProvider>
-        <AppLayout />
+        <AppRouter />
       </AppProvider>
     </BrowserRouter>
   );

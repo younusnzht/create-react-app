@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: '/barcode', label: 'Barcode System', icon: QrCode },
   { section: 'Management' },
   { path: '/suppliers', label: 'Suppliers', icon: Truck },
+  { path: '/customers', label: 'Customers', icon: Users2 },
   { path: '/users', label: 'User Management', icon: Users },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
   { section: 'AI & Platform' },
@@ -24,9 +25,10 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders } = useApp();
 
   const criticalIssues = aiIssues.filter(i => i.severity === 'critical' && i.status === 'pending').length;
+  const newOrderCount = onlineOrders?.filter(o => o.status === 'new').length || 0;
 
   return (
     <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
@@ -68,6 +70,9 @@ export default function Sidebar() {
               )}
               {item.aiFeature && !criticalIssues && (
                 <span className="nav-ai-badge nav-label">AI</span>
+              )}
+              {item.path === '/online-orders' && newOrderCount > 0 && (
+                <span className="nav-badge">{newOrderCount}</span>
               )}
             </NavLink>
           );

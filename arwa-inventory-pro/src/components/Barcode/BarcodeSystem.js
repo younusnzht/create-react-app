@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { QrCode, Zap, Printer, CheckCircle, AlertTriangle, RefreshCw, Package, Plus, Minus, Layers, Hash, ArrowRight, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -44,6 +44,16 @@ export default function BarcodeSystem() {
 
   // Print queue state
   const [printQueue, setPrintQueue] = useState([]);
+
+  // Tab focus management
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeTab === 'scanner' && inputRef.current) inputRef.current.focus();
+      if (activeTab === 'individual' && receiveRef.current) receiveRef.current.focus();
+      if (activeTab === 'carton' && cartonRef.current) cartonRef.current.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   const addToHistory = (barcode, product, action, qty) => {
     setHistory(prev => [{
@@ -102,7 +112,10 @@ export default function BarcodeSystem() {
 
   const commitIndividualReceive = () => {
     if (!receiveList.length) return;
-    receiveList.forEach(r => updateProduct(r.product.id, { stock: r.product.stock + r.qty }));
+    receiveList.forEach(r => {
+      const current = products.find(p => p.id === r.product.id);
+      if (current) updateProduct(r.product.id, { stock: current.stock + r.qty });
+    });
     showToast(`Stock updated — ${receiveList.length} product(s) received`, 'success');
     setReceiveList([]);
     setReceivingNote('');
@@ -145,7 +158,10 @@ export default function BarcodeSystem() {
 
   const commitCartonReceive = () => {
     if (!cartonList.length) return;
-    cartonList.forEach(c => updateProduct(c.product.id, { stock: c.product.stock + c.totalUnits }));
+    cartonList.forEach(c => {
+      const current = products.find(p => p.id === c.product.id);
+      if (current) updateProduct(c.product.id, { stock: current.stock + c.totalUnits });
+    });
     showToast(`Carton receive complete — ${cartonList.reduce((s, c) => s + c.totalUnits, 0)} units added to stock`, 'success');
     setCartonList([]);
   };
@@ -200,7 +216,6 @@ export default function BarcodeSystem() {
                   value={scanInput}
                   onChange={e => setScanInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && scanInput && simulateScan(scanInput)}
-                  autoFocus
                   style={{ fontSize: 15, fontFamily: 'monospace' }}
                 />
                 {scanning && <RefreshCw size={14} className="spin" style={{ color: 'var(--primary-light)' }} />}
@@ -304,7 +319,6 @@ export default function BarcodeSystem() {
                 value={receiveInput}
                 onChange={e => setReceiveInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && receiveInput && scanForReceive(receiveInput)}
-                autoFocus
                 style={{ fontSize: 15, fontFamily: 'monospace' }}
               />
             </div>
@@ -518,6 +532,11 @@ export default function BarcodeSystem() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.barcode}</div>
+                  <div style={{ display: 'flex', gap: 1, height: 30, alignItems: 'flex-end', margin: '6px 0' }}>
+                    {Array.from(p.barcode).map((c, i) => (
+                      <div key={i} style={{ width: parseInt(c) % 2 === 0 ? 2 : 1, height: parseInt(c) % 3 === 0 ? 30 : 20, background: 'var(--text-primary)' }} />
+                    ))}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <button className="icon-btn" style={{ width: 24, height: 24, borderRadius: 6 }} onClick={() => setPrintQueue(prev => prev.map(x => x.id === p.id ? { ...x, labelQty: Math.max(1, x.labelQty - 1) } : x))}><Minus size={11} /></button>

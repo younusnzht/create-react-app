@@ -23,6 +23,9 @@ const PERMISSIONS_BY_ROLE = {
   salesperson: ['POS access', 'Customer management', 'Basic inventory view'],
 };
 
+// FIX 13: Plan user limits
+const PLAN_LIMITS = { basic: 3, intermediate: 15, super: -1 };
+
 function UserModal({ user, onClose, onSave }) {
   const [form, setForm] = useState(user || {
     name: '', email: '', role: 'cashier', status: 'active', branch: 'Main Store',
@@ -89,19 +92,32 @@ function UserModal({ user, onClose, onSave }) {
 }
 
 export default function UserManagement() {
-  const { users, setUsers, showToast, currentUser } = useApp();
+  // FIX 11: Use context addUser and deleteUser; FIX 13: Import subscription
+  const { users, addUser, deleteUser: ctxDeleteUser, setUsers, showToast, currentUser, subscription } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [filter, setFilter] = useState('all');
 
-  const filtered = filter === 'all' ? users : users.filter(u => u.status === filter || u.role === filter);
+  // FIX 12: Separate role and status filters
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
+  const filtered = users.filter(u =>
+    (roleFilter === 'all' || u.role === roleFilter) &&
+    (statusFilter === 'all' || u.status === statusFilter)
+  );
+
+  // FIX 13: Plan limit logic
+  const limit = PLAN_LIMITS[subscription?.plan] ?? -1;
+  const nearLimit = limit > 0 && users.length >= limit - 1;
+  const atLimit = limit > 0 && users.length >= limit;
+
+  // FIX 11: Use context addUser / setUsers for edit
   const handleSave = (userData) => {
     if (editUser) {
       setUsers(prev => prev.map(u => u.id === editUser.id ? userData : u));
       showToast('User updated successfully');
     } else {
-      setUsers(prev => [...prev, userData]);
+      addUser(userData);
       showToast('Staff account created');
     }
     setShowModal(false);
@@ -112,9 +128,10 @@ export default function UserManagement() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
   };
 
-  const deleteUser = (id) => {
+  // FIX 11: Use context deleteUser
+  const handleDelete = (id) => {
     if (window.confirm('Remove this staff account?')) {
-      setUsers(prev => prev.filter(u => u.id !== id));
+      ctxDeleteUser(id);
       showToast('Account removed', 'info');
     }
   };
@@ -124,12 +141,35 @@ export default function UserManagement() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>User Management</h1>
-          <p>{users.filter(u => u.status === 'active').length} active staff across all branches</p>
+          {/* FIX 14: Show user count with plan limit */}
+          <p>
+            {users.filter(u => u.status === 'active').length} active staff across all branches
+            {' · '}
+            <strong>{users.length} / {limit === -1 ? '∞' : limit} users</strong>
+          </p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setEditUser(null); setShowModal(true); }}>
+        {/* FIX 13: Disable button at limit */}
+        <button
+          className="btn btn-primary"
+          onClick={() => { if (!atLimit) { setEditUser(null); setShowModal(true); } }}
+          disabled={atLimit}
+          title={atLimit ? 'User limit reached for your plan' : undefined}
+        >
           <Plus size={14} /> Create Staff Account
         </button>
       </div>
+
+      {/* FIX 13: Plan limit warning banner */}
+      {atLimit && (
+        <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 13, fontWeight: 600, color: '#EF4444', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <UserX size={15} /> User limit reached for your plan — upgrade to add more staff accounts
+        </div>
+      )}
+      {!atLimit && nearLimit && (
+        <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 13, fontWeight: 600, color: '#D97706', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Shield size={15} /> You're at {users.length}/{limit} users — upgrade to add more
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
@@ -147,13 +187,24 @@ export default function UserManagement() {
       </div>
 
       <div className="card">
-        {/* Filters */}
-        <div className="tabs" style={{ marginBottom: 16 }}>
-          {['all', 'active', 'inactive', 'admin', 'manager', 'cashier'].map(f => (
-            <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+        {/* FIX 12: Separate Role and Status filter rows */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Role</div>
+          <div className="tabs" style={{ marginBottom: 10 }}>
+            {['all', 'admin', 'manager', 'cashier', 'warehouse', 'accountant'].map(r => (
+              <button key={r} className={`tab ${roleFilter === r ? 'active' : ''}`} onClick={() => setRoleFilter(r)}>
+                {r.charAt(0).toUpperCase() + r.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Status</div>
+          <div className="tabs">
+            {['all', 'active', 'inactive'].map(s => (
+              <button key={s} className={`tab ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -203,7 +254,7 @@ export default function UserManagement() {
                       >
                         {user.status === 'active' ? <UserX size={12} /> : <UserCheck size={12} />}
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(user.id)} title="Remove account">
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(user.id)} title="Remove account">
                         <X size={12} />
                       </button>
                     </>

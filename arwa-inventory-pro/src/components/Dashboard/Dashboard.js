@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -8,8 +8,13 @@ import {
   AlertTriangle, Activity, Zap, ArrowRight, Eye
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { SALES_DATA, WEEKLY_SALES, CATEGORY_DATA } from '../../data/mockData';
+import { SALES_DATA, WEEKLY_SALES } from '../../data/mockData';
 import { useNavigate } from 'react-router-dom';
+
+const getCurrencySymbol = (code) => {
+  const s = { USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', AUD: 'A$', JPY: '¥', INR: '₹', PKR: '₨', AED: 'د.إ', SAR: '﷼' };
+  return s[code] || code + ' ';
+};
 
 
 const StatCard = ({ label, value, change, icon: Icon, color, bg, prefix = '' }) => (
@@ -30,14 +35,14 @@ const StatCard = ({ label, value, change, icon: Icon, color, bg, prefix = '' }) 
   </div>
 );
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, currencySymbol = '$' }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ fontSize: 13, color: p.color, fontWeight: 600 }}>
-          {p.name}: {p.name === 'orders' ? p.value : `$${p.value.toLocaleString()}`}
+          {p.name}: {p.name === 'orders' ? p.value : `${currencySymbol}${p.value.toLocaleString()}`}
         </p>
       ))}
     </div>
@@ -45,9 +50,11 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { products, aiMetrics, aiIssues } = useApp();
+  const { products, orders, currency, aiMetrics, aiIssues } = useApp();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState('monthly');
+
+  const currencySymbol = getCurrencySymbol(currency);
 
   const totalProducts = products.length;
   const lowStockItems = products.filter(p => p.stock <= p.minStock && p.stock > 0);
@@ -58,9 +65,38 @@ export default function Dashboard() {
 
   const healthColor = aiMetrics.healthScore >= 80 ? '#10B981' : aiMetrics.healthScore >= 60 ? '#F59E0B' : '#EF4444';
 
-  const topProducts = [...products]
-    .sort((a, b) => (b.salePrice - b.purchasePrice) * b.stock - (a.salePrice - a.purchasePrice) * a.stock)
-    .slice(0, 5);
+  // FIX 7: Derive revenue and order stats from real orders
+  const completedOrders = orders.filter(o => o.status === 'completed');
+  const totalRevenue = completedOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const today = new Date().toDateString();
+  const ordersToday = completedOrders.filter(o => new Date(o.date).toDateString() === today).length;
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+  const thisMonthRevenue = completedOrders
+    .filter(o => { const d = new Date(o.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; })
+    .reduce((s, o) => s + (o.total || 0), 0);
+  const prevMonthRevenue = completedOrders
+    .filter(o => { const d = new Date(o.date); return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear; })
+    .reduce((s, o) => s + (o.total || 0), 0);
+  const revenueChange = prevMonthRevenue > 0
+    ? parseFloat(((thisMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100).toFixed(1))
+    : 0;
+
+  // FIX 8: Derive category breakdown from real products
+  const CATEGORY_COLORS = ['#4F46E5', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0284C7', '#06B6D4'];
+  const categoryBreakdown = useMemo(() => {
+    const counts = products.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc; }, {});
+    return Object.entries(counts).slice(0, 7).map(([name, value], i) => ({ name, value, color: CATEGORY_COLORS[i] }));
+  }, [products]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // FIX 9: Top products by margin percentage, wrapped in useMemo
+  const topProducts = useMemo(() => [...products]
+    .sort((a, b) => ((b.salePrice - b.purchasePrice) / b.salePrice) - ((a.salePrice - a.purchasePrice) / a.salePrice))
+    .slice(0, 5), [products]);
 
   return (
     <div>
@@ -96,8 +132,8 @@ export default function Dashboard() {
       {/* Stats Row */}
       <div className="stats-grid">
         <StatCard
-          label="Monthly Revenue" value={58200} prefix="$"
-          change={8.3} icon={DollarSign}
+          label="Monthly Revenue" value={Math.round(totalRevenue)} prefix={currencySymbol}
+          change={revenueChange} icon={DollarSign}
           color="#10B981" bg="rgba(16,185,129,0.12)"
         />
         <StatCard
@@ -106,12 +142,12 @@ export default function Dashboard() {
           color="#4F46E5" bg="rgba(79,70,229,0.12)"
         />
         <StatCard
-          label="Orders Today" value={47}
-          change={12.5} icon={ShoppingCart}
+          label="Orders Today" value={ordersToday}
+          change={undefined} icon={ShoppingCart}
           color="#06B6D4" bg="rgba(6,182,212,0.12)"
         />
         <StatCard
-          label="Inventory Value" value={Math.round(totalInventoryValue)} prefix="$"
+          label="Inventory Value" value={Math.round(totalInventoryValue)} prefix={currencySymbol}
           change={-1.2} icon={Activity}
           color="#F59E0B" bg="rgba(245,158,11,0.12)"
         />
@@ -142,8 +178,8 @@ export default function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${(v/1000).toFixed(0)}k`} />
+                <Tooltip content={(props) => <CustomTooltip {...props} currencySymbol={currencySymbol} />} />
                 <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#4F46E5" fill="url(#revGrad)" strokeWidth={2} dot={false} />
                 <Area type="monotone" dataKey="profit" name="Profit" stroke="#10B981" fill="url(#profGrad)" strokeWidth={2} dot={false} />
               </AreaChart>
@@ -151,8 +187,8 @@ export default function Dashboard() {
               <BarChart data={WEEKLY_SALES}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
-                <Tooltip content={<CustomTooltip />} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${(v/1000).toFixed(1)}k`} />
+                <Tooltip content={(props) => <CustomTooltip {...props} currencySymbol={currencySymbol} />} />
                 <Bar dataKey="sales" name="Sales" fill="#4F46E5" radius={[4,4,0,0]} />
               </BarChart>
             )}
@@ -166,22 +202,22 @@ export default function Dashboard() {
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={CATEGORY_DATA} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
-                {CATEGORY_DATA.map((entry, i) => (
+              <Pie data={categoryBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                {categoryBreakdown.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(val) => `${val}%`} contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8 }} />
+              <Tooltip formatter={(val) => val} contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8 }} />
             </PieChart>
           </ResponsiveContainer>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-            {CATEGORY_DATA.slice(0, 4).map((c, i) => (
+            {categoryBreakdown.slice(0, 4).map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color }} />
                   <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
                 </div>
-                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.value}%</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.value}</span>
               </div>
             ))}
           </div>
