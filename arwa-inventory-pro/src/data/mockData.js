@@ -224,6 +224,21 @@ export const REPAIR_HISTORY = [
   { id: 5, action: 'Fixed API timeout handler', module: 'Cloud Sync', result: 'success', time: '2024-07-13T11:00:00', improvement: 'Zero timeouts' },
 ];
 
+export const ONLINE_ORDERS = [
+  { id: '482901', platform: 'ubereats', customer: 'James Carter', type: 'delivery', status: 'new', time: '11:42', total: 38.50, address: '124 Maple St, Unit 3', note: 'No onions please', items: [{ name: 'Chicken Burger', qty: 2, price: 12.99 }, { name: 'Large Fries', qty: 2, price: 4.99 }, { name: 'Coke 500ml', qty: 2, price: 2.75 }] },
+  { id: '482899', platform: 'doordash', customer: 'Priya Sharma', type: 'delivery', status: 'preparing', time: '11:28', total: 52.10, address: '88 Oak Avenue', note: '', items: [{ name: 'Family Meal Deal', qty: 1, price: 39.99 }, { name: 'Extra Sauce', qty: 3, price: 0.99, note: 'BBQ' }, { name: 'Water Bottle', qty: 2, price: 1.99 }] },
+  { id: '482897', platform: 'skipthedishes', customer: 'Mohammed Ali', type: 'pickup', status: 'ready', time: '11:15', total: 24.75, address: '', note: 'Call on arrival', items: [{ name: 'Shawarma Wrap', qty: 2, price: 10.99 }, { name: 'Hummus Side', qty: 1, price: 4.50 }] },
+  { id: '482895', platform: 'website', customer: 'Sarah Lee', type: 'pickup', status: 'confirmed', time: '10:58', total: 19.98, address: '', note: '', items: [{ name: 'Sandwich Combo', qty: 2, price: 9.99 }] },
+  { id: '482893', platform: 'phone', customer: 'Walk-in Table 4', type: 'dinein', status: 'preparing', time: '10:45', total: 67.80, address: '', note: 'Birthday — bring candle', items: [{ name: 'BBQ Ribs Full Rack', qty: 1, price: 34.99 }, { name: 'Caesar Salad', qty: 2, price: 11.99 }, { name: 'Cheesecake', qty: 2, price: 8.99 }] },
+  { id: '482891', platform: 'ubereats', customer: 'Carlos Mendez', type: 'delivery', status: 'pickup', time: '10:30', total: 15.98, address: '45 Pine Rd', note: '', items: [{ name: 'Pizza Slice x4', qty: 4, price: 3.99 }] },
+  { id: '482888', platform: 'doordash', customer: 'Linda Wong', type: 'delivery', status: 'delivered', time: '09:55', total: 43.20, address: '302 Elm Blvd', note: '', items: [{ name: 'Pasta Carbonara', qty: 2, price: 16.99 }, { name: 'Garlic Bread', qty: 2, price: 4.99 }] },
+  { id: '482886', platform: 'phone', customer: 'Ahmed Hassan', type: 'pickup', status: 'delivered', time: '09:40', total: 12.50, address: '', note: '', items: [{ name: 'Breakfast Wrap', qty: 1, price: 9.99 }, { name: 'Orange Juice', qty: 1, price: 3.50 }] },
+  { id: '482884', platform: 'skipthedishes', customer: 'Emma Brown', type: 'delivery', status: 'cancelled', time: '09:20', total: 28.00, address: '77 Cedar Lane', note: 'Cancelled by customer', items: [{ name: 'Veggie Burger Combo', qty: 2, price: 14.00 }] },
+  { id: '482882', platform: 'website', customer: 'David Kim', type: 'pickup', status: 'new', time: '11:50', total: 33.96, address: '', note: 'Gluten free bun please', items: [{ name: 'Gourmet Burger', qty: 2, price: 13.99 }, { name: 'Onion Rings', qty: 2, price: 5.99 }] },
+  { id: '482880', platform: 'ubereats', customer: 'Fatima Noor', type: 'delivery', status: 'confirmed', time: '11:38', total: 21.97, address: '19 Birch St', note: '', items: [{ name: 'Chicken Tenders 6pc', qty: 1, price: 13.99 }, { name: 'Coleslaw', qty: 2, price: 3.99 }] },
+  { id: '482878', platform: 'doordash', customer: 'Ryan O\'Brien', type: 'delivery', status: 'preparing', time: '11:22', total: 46.95, address: '56 Willow Way', note: 'Ring doorbell twice', items: [{ name: 'Steak Dinner', qty: 1, price: 34.99 }, { name: 'Side Salad', qty: 1, price: 7.99 }, { name: 'Sparkling Water', qty: 2, price: 1.99 }] },
+];
+
 export const NOTIFICATIONS = [
   { id: 1, type: 'warning', message: 'Low stock: Organic Whole Milk (12 units remaining)', time: '2 min ago', read: false },
   { id: 2, type: 'critical', message: 'AI Alert: Memory usage at 78% — action recommended', time: '15 min ago', read: false },

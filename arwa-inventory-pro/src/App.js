@@ -14,6 +14,7 @@ import AIGuardian from './components/AIGuardian/AIGuardian';
 import Subscription from './components/Subscription/Subscription';
 import Suppliers from './components/Suppliers/Suppliers';
 import Settings from './components/Settings/Settings';
+import OnlineOrders from './components/OnlineOrders/OnlineOrders';
 
 function AppLayout() {
   const { theme, colorTheme } = useApp();
@@ -35,6 +36,7 @@ function AppLayout() {
             <Route path="/ai-guardian" element={<AIGuardian />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/online-orders" element={<OnlineOrders />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
