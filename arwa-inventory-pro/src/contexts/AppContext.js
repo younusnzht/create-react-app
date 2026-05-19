@@ -188,6 +188,11 @@ export function AppProvider({ children }) {
     showToast('Customer updated successfully');
   }, [showToast]);
 
+  const deleteCustomer = useCallback((id) => {
+    setCustomers(prev => prev.filter(c => c.id !== id));
+    showToast('Customer removed', 'info');
+  }, [showToast]);
+
   const addUser = useCallback((u) => {
     const plan = SUBSCRIPTION_PLANS[subscription.plan];
     const limit = plan ? plan.users : -1;
@@ -257,7 +262,7 @@ export function AppProvider({ children }) {
     // Suppliers
     suppliers, setSuppliers, addSupplier, updateSupplier,
     // Customers
-    customers, setCustomers, addCustomer, updateCustomer,
+    customers, setCustomers, addCustomer, updateCustomer, deleteCustomer,
     // Users
     users, setUsers, addUser, deleteUser,
     // Orders
@@ -280,7 +285,7 @@ export function AppProvider({ children }) {
     isAuthenticated, currentUser, login, logout,
     products, addProduct, updateProduct, deleteProduct,
     suppliers, addSupplier, updateSupplier,
-    customers, addCustomer, updateCustomer,
+    customers, addCustomer, updateCustomer, deleteCustomer,
     users, addUser, deleteUser,
     orders, addOrder,
     onlineOrders, updateOnlineOrderStatus, addOnlineOrder,

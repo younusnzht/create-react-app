@@ -65,7 +65,6 @@ export default function Dashboard() {
 
   const healthColor = aiMetrics.healthScore >= 80 ? '#10B981' : aiMetrics.healthScore >= 60 ? '#F59E0B' : '#EF4444';
 
-  // FIX 7: Derive revenue and order stats from real orders
   const completedOrders = orders.filter(o => o.status === 'completed');
   const totalRevenue = completedOrders.reduce((s, o) => s + (o.total || 0), 0);
   const today = new Date().toDateString();
@@ -86,14 +85,12 @@ export default function Dashboard() {
     ? parseFloat(((thisMonthRevenue - prevMonthRevenue) / prevMonthRevenue * 100).toFixed(1))
     : 0;
 
-  // FIX 8: Derive category breakdown from real products
   const CATEGORY_COLORS = ['#4F46E5', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0284C7', '#06B6D4'];
   const categoryBreakdown = useMemo(() => {
     const counts = products.reduce((acc, p) => { acc[p.category] = (acc[p.category] || 0) + 1; return acc; }, {});
     return Object.entries(counts).slice(0, 7).map(([name, value], i) => ({ name, value, color: CATEGORY_COLORS[i] }));
   }, [products]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // FIX 9: Top products by margin percentage, wrapped in useMemo
   const topProducts = useMemo(() => [...products]
     .sort((a, b) => ((b.salePrice - b.purchasePrice) / b.salePrice) - ((a.salePrice - a.purchasePrice) / a.salePrice))
     .slice(0, 5), [products]);
