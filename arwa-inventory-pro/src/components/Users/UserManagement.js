@@ -23,7 +23,6 @@ const PERMISSIONS_BY_ROLE = {
   salesperson: ['POS access', 'Customer management', 'Basic inventory view'],
 };
 
-// FIX 13: Plan user limits
 const PLAN_LIMITS = { basic: 3, intermediate: 15, super: -1 };
 
 function UserModal({ user, onClose, onSave }) {
@@ -92,12 +91,10 @@ function UserModal({ user, onClose, onSave }) {
 }
 
 export default function UserManagement() {
-  // FIX 11: Use context addUser and deleteUser; FIX 13: Import subscription
   const { users, addUser, deleteUser: ctxDeleteUser, setUsers, showToast, currentUser, subscription } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
 
-  // FIX 12: Separate role and status filters
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -106,19 +103,16 @@ export default function UserManagement() {
     (statusFilter === 'all' || u.status === statusFilter)
   );
 
-  // FIX 13: Plan limit logic
   const limit = PLAN_LIMITS[subscription?.plan] ?? -1;
   const nearLimit = limit > 0 && users.length >= limit - 1;
   const atLimit = limit > 0 && users.length >= limit;
 
-  // FIX 11: Use context addUser / setUsers for edit
   const handleSave = (userData) => {
     if (editUser) {
       setUsers(prev => prev.map(u => u.id === editUser.id ? userData : u));
       showToast('User updated successfully');
     } else {
       addUser(userData);
-      showToast('Staff account created');
     }
     setShowModal(false);
     setEditUser(null);
@@ -128,11 +122,9 @@ export default function UserManagement() {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
   };
 
-  // FIX 11: Use context deleteUser
   const handleDelete = (id) => {
     if (window.confirm('Remove this staff account?')) {
       ctxDeleteUser(id);
-      showToast('Account removed', 'info');
     }
   };
 
@@ -141,14 +133,12 @@ export default function UserManagement() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>User Management</h1>
-          {/* FIX 14: Show user count with plan limit */}
           <p>
             {users.filter(u => u.status === 'active').length} active staff across all branches
             {' · '}
             <strong>{users.length} / {limit === -1 ? '∞' : limit} users</strong>
           </p>
         </div>
-        {/* FIX 13: Disable button at limit */}
         <button
           className="btn btn-primary"
           onClick={() => { if (!atLimit) { setEditUser(null); setShowModal(true); } }}
@@ -159,7 +149,6 @@ export default function UserManagement() {
         </button>
       </div>
 
-      {/* FIX 13: Plan limit warning banner */}
       {atLimit && (
         <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', fontSize: 13, fontWeight: 600, color: '#EF4444', display: 'flex', alignItems: 'center', gap: 8 }}>
           <UserX size={15} /> User limit reached for your plan — upgrade to add more staff accounts
@@ -187,7 +176,6 @@ export default function UserManagement() {
       </div>
 
       <div className="card">
-        {/* FIX 12: Separate Role and Status filter rows */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Role</div>
           <div className="tabs" style={{ marginBottom: 10 }}>

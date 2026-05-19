@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { CATEGORIES, SUPPLIERS } from '../../data/mockData';
+import { CATEGORIES } from '../../data/mockData';
 
 const STATUS_CONFIG = {
   active: { label: 'In Stock', cls: 'badge-success' },
@@ -15,7 +15,7 @@ const getCurrencySymbol = (code) => {
   return s[code] || code + ' ';
 };
 
-function ProductModal({ product, onClose, onSave }) {
+function ProductModal({ product, suppliers, onClose, onSave }) {
   const [form, setForm] = useState(product || {
     name: '', sku: '', barcode: '', category: CATEGORIES[0],
     supplier: 'PharmaCo Ltd', purchasePrice: '', salePrice: '',
@@ -95,7 +95,7 @@ function ProductModal({ product, onClose, onSave }) {
             <div className="form-group">
               <label className="form-label">Supplier</label>
               <select className="form-control" value={form.supplier} onChange={e => set('supplier', e.target.value)}>
-                {SUPPLIERS.map(s => <option key={s.id}>{s.name}</option>)}
+                {suppliers.map(s => <option key={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div className="form-group">
@@ -128,7 +128,7 @@ function ProductModal({ product, onClose, onSave }) {
 }
 
 export default function Inventory() {
-  const { products, addProduct, updateProduct, deleteProduct, currency, showToast } = useApp();
+  const { products, addProduct, updateProduct, deleteProduct, currency, showToast, suppliers } = useApp();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -477,6 +477,7 @@ export default function Inventory() {
       {showModal && (
         <ProductModal
           product={editProduct}
+          suppliers={suppliers}
           onClose={() => { setShowModal(false); setEditProduct(null); }}
           onSave={(data) => {
             if (editProduct) updateProduct(editProduct.id, data);

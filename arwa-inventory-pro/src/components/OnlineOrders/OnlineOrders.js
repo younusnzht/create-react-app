@@ -31,7 +31,6 @@ const PLATFORM_LOGOS = {
   phone:         { bg: '#8B5CF6', letter: 'P', text: 'Phone/Walk-in' },
 };
 
-// FIX 9: Currency symbol helper
 const sym = (code) => ({ USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', PKR: '₨', INR: '₹', AED: 'د.إ' }[code] || code + ' ');
 
 function PlatformBadge({ platform }) {
@@ -92,7 +91,6 @@ function OrderCard({ order, onStatusChange, currencyCode }) {
             <Clock size={11} />
             {order.time}
           </div>
-          {/* FIX 9: Use currency symbol */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 800, color: 'var(--success)', marginLeft: 'auto' }}>
             <DollarSign size={13} />{sym(currencyCode)}{order.total.toFixed(2)}
           </div>
@@ -112,7 +110,6 @@ function OrderCard({ order, onStatusChange, currencyCode }) {
             {order.items.map((it, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', borderBottom: i < order.items.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <span>{it.qty}× {it.name}{it.note ? <span style={{ color: 'var(--text-muted)' }}> ({it.note})</span> : ''}</span>
-                {/* FIX 9: Use currency symbol in expanded line items */}
                 <span style={{ fontWeight: 600 }}>{sym(currencyCode)}{(it.price * it.qty).toFixed(2)}</span>
               </div>
             ))}
@@ -153,7 +150,6 @@ function OrderCard({ order, onStatusChange, currencyCode }) {
 }
 
 export default function OnlineOrders() {
-  // FIX 5: Use context onlineOrders + updateOnlineOrderStatus + currency
   const { onlineOrders: orders, updateOnlineOrderStatus, addOnlineOrder, showToast, currency } = useApp();
   const [activePlatform, setActivePlatform] = useState('all');
   const [activeStatus, setActiveStatus] = useState('all');
@@ -166,11 +162,9 @@ export default function OnlineOrders() {
     return platformOk && statusOk;
   });
 
-  // FIX 6 + FIX 7: Wire to context and show toast on fulfillment
   const handleStatusChange = (id, newStatus) => {
     updateOnlineOrderStatus(id, newStatus);
     showToast(`Order #${id} → ${STATUS_CONFIG[newStatus]?.label}`, newStatus === 'cancelled' ? 'warning' : 'success');
-    // FIX 7: Inventory deduction acknowledgement on fulfillment
     if (newStatus === 'delivered' || newStatus === 'pickup') {
       showToast('Order fulfilled. Tap to deduct inventory.', 'info');
     }
@@ -180,12 +174,10 @@ export default function OnlineOrders() {
     Object.keys(STATUS_CONFIG).map(s => [s, orders.filter(o => o.status === s).length])
   );
 
-  // FIX 8 + FIX 10: Validate $0 and use addOnlineOrder from context
   const addNewOrder = (e) => {
     e.preventDefault();
     const id = `${Date.now()}`.slice(-6);
     const total = newOrder.items.reduce((s, it) => s + it.price * it.qty, 0);
-    // FIX 8: Warn on $0 total
     if (total === 0) {
       showToast('Order total is $0 — please add item prices', 'warning');
     }
@@ -196,7 +188,6 @@ export default function OnlineOrders() {
       total, items: newOrder.items.filter(it => it.name),
       note: newOrder.note, address: '',
     };
-    // FIX 10: Use addOnlineOrder from context
     addOnlineOrder(orderObj);
     showToast(`New order #${id} created`, 'success');
     setShowNewModal(false);
@@ -355,7 +346,6 @@ export default function OnlineOrders() {
                 <input className="form-control" placeholder="Allergies, special instructions..." value={newOrder.note} onChange={e => setNewOrder(o => ({ ...o, note: e.target.value }))} />
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                {/* FIX 9: Currency symbol in modal total */}
                 <span style={{ fontSize: 14, fontWeight: 700 }}>
                   Total: {sym(currency)}{newOrder.items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2)}
                 </span>

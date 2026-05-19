@@ -7,11 +7,9 @@ export default function Suppliers() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', country: '' });
 
-  // FIX 2: Edit supplier state
   const [editSupplier, setEditSupplier] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', country: '' });
 
-  // FIX 3: Purchase Order state
   const [poSupplier, setPoSupplier] = useState(null);
   const [poNumber] = useState(`PO-${Date.now().toString().slice(-6)}`);
   const [poForm, setPoForm] = useState({ deliveryDate: '', notes: '' });
@@ -20,16 +18,13 @@ export default function Suppliers() {
   const setEdit = (k, v) => setEditForm(f => ({ ...f, [k]: v }));
   const setPo = (k, v) => setPoForm(f => ({ ...f, [k]: v }));
 
-  // FIX 4: Use addSupplier from context
   const handleAdd = (e) => {
     e.preventDefault();
     addSupplier({ ...form, id: Date.now(), rating: 4.0, totalOrders: 0, balance: 0 });
-    showToast('Supplier added');
     setShowModal(false);
     setForm({ name: '', email: '', phone: '', country: '' });
   };
 
-  // FIX 2: Edit supplier handler
   const openEdit = (s) => {
     setEditSupplier(s);
     setEditForm({ name: s.name, email: s.email, phone: s.phone, country: s.country });
@@ -38,11 +33,9 @@ export default function Suppliers() {
   const handleEdit = (e) => {
     e.preventDefault();
     updateSupplier(editSupplier.id, editForm);
-    showToast('Supplier updated', 'success');
     setEditSupplier(null);
   };
 
-  // FIX 3: Purchase Order handler
   const handlePO = (e) => {
     e.preventDefault();
     showToast(`Purchase Order ${poNumber} sent to ${poSupplier.name}`, 'success');
@@ -110,11 +103,9 @@ export default function Suppliers() {
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              {/* FIX 2: Wire Edit button */}
               <button className="btn btn-secondary btn-sm w-full" style={{ justifyContent: 'center' }} onClick={() => openEdit(s)}>
                 <Edit2 size={12} /> Edit
               </button>
-              {/* FIX 3: Wire + Order button */}
               <button className="btn btn-primary btn-sm w-full" style={{ justifyContent: 'center' }} onClick={() => setPoSupplier(s)}>
                 + Order
               </button>
@@ -159,7 +150,6 @@ export default function Suppliers() {
         </div>
       )}
 
-      {/* FIX 2: Edit Supplier Modal */}
       {editSupplier && (
         <div className="modal-overlay" onClick={() => setEditSupplier(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -195,7 +185,6 @@ export default function Suppliers() {
         </div>
       )}
 
-      {/* FIX 3: Purchase Order Modal */}
       {poSupplier && (
         <div className="modal-overlay" onClick={() => setPoSupplier(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>

@@ -13,7 +13,6 @@ const PAYMENT_METHODS = [
 
 const QUICK_DISCOUNTS = [5, 10, 15, 20];
 
-// FIX 7: Currency symbol helper
 const getCurrencySymbol = (code) => {
   const symbols = {
     USD: '$', GBP: '£', EUR: '€', CAD: 'CA$', AUD: 'A$', JPY: '¥',
@@ -27,7 +26,6 @@ const getCurrencySymbol = (code) => {
 };
 
 export default function POS() {
-  // FIX 1/3/7: Destructure addOrder, currency, currentUser from useApp
   const { products, updateProduct, addOrder, showToast, currentUser, currency, orders } = useApp();
 
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'return'
@@ -41,17 +39,14 @@ export default function POS() {
   const [barcodeInput, setBarcodeInput] = useState('');
   const barcodeRef = useRef(null);
 
-  // FIX 5: Hold/Park sale state
   const [heldCarts, setHeldCarts] = useState([]);
   const [showHeldPanel, setShowHeldPanel] = useState(false);
 
-  // FIX 6: Return/Refund state
   const [returnOrderId, setReturnOrderId] = useState('');
   const [returnOrder, setReturnOrder] = useState(null);
   const [returnItems, setReturnItems] = useState([]);
   const [returnError, setReturnError] = useState('');
 
-  // FIX 7: resolved currency symbol
   const sym = getCurrencySymbol(currency || 'USD');
 
   const visibleProducts = products.filter(p => {
@@ -59,7 +54,6 @@ export default function POS() {
     return p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.sku.toLowerCase().includes(q);
   }).slice(0, 20);
 
-  // FIX 8: Stock check before adding to cart; cap qty at current stock
   const addToCart = (product) => {
     const currentProduct = products.find(p => p.id === product.id);
     if (!currentProduct || currentProduct.stock <= 0) {
@@ -77,7 +71,6 @@ export default function POS() {
     });
   };
 
-  // FIX 8: Cap qty update at current product stock
   const updateQty = (id, delta) => {
     setCart(prev => prev.map(i => {
       if (i.id !== id) return i;
@@ -106,11 +99,9 @@ export default function POS() {
     }
   };
 
-  // FIX 1, 2, 3: processPayment with stale-stock fix, cash validation, and addOrder call
   const processPayment = () => {
     if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
 
-    // FIX 2: Strict cash validation — must be filled and >= total
     if (paymentMethod === 'cash') {
       const cashVal = parseFloat(cashGiven);
       if (!cashGiven || isNaN(cashVal) || cashVal < total) {
@@ -119,7 +110,6 @@ export default function POS() {
       }
     }
 
-    // FIX 1: Re-read stock at payment time and validate before any update
     for (const item of cart) {
       const currentProduct = products.find(p => p.id === item.id);
       if (!currentProduct) {
@@ -156,7 +146,6 @@ export default function POS() {
       time: new Date().toLocaleString(),
     };
 
-    // FIX 3: Wire completed sale to addOrder
     addOrder({
       id: orderId,
       customer: customerName || 'Walk-in Customer',
@@ -177,7 +166,6 @@ export default function POS() {
     showToast(`Payment processed! Order ${orderId}`, 'success');
   };
 
-  // FIX 4: Real print receipt implementation
   const handlePrintReceipt = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -206,7 +194,6 @@ export default function POS() {
     printWindow.close();
   };
 
-  // FIX 5: Hold sale handlers
   const holdSale = () => {
     if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
     const label = `Sale – ${new Date().toLocaleTimeString()}`;
@@ -227,7 +214,6 @@ export default function POS() {
     showToast('Sale restored', 'success');
   };
 
-  // FIX 6: Return/Refund handlers
   const lookupReturnOrder = () => {
     setReturnError('');
     setReturnOrder(null);
@@ -341,7 +327,6 @@ export default function POS() {
             <button className="btn btn-secondary w-full" onClick={() => setReceipt(null)}>
               <RotateCcw size={14} /> New Sale
             </button>
-            {/* FIX 4: Real print receipt */}
             <button className="btn btn-primary w-full" onClick={handlePrintReceipt}>
               <Printer size={14} /> Print Receipt
             </button>
@@ -354,7 +339,6 @@ export default function POS() {
   // ─── Tab bar ──────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
-      {/* FIX 6: Tab navigation */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border)', marginBottom: 14 }}>
         {[
           { id: 'pos', label: 'Point of Sale', icon: ShoppingCart },
@@ -420,7 +404,6 @@ export default function POS() {
                     <ShoppingCart size={18} style={{ color: 'var(--primary-light)' }} />
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, marginBottom: 6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
-                  {/* FIX 7: currency symbol */}
                   <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--success)' }}>{sym}{p.salePrice.toFixed(2)}</div>
                   <div style={{ fontSize: 11, color: p.stock <= p.minStock ? 'var(--warning)' : 'var(--text-muted)', marginTop: 2 }}>
                     Stock: {p.stock}
@@ -445,7 +428,6 @@ export default function POS() {
                 />
               </div>
 
-              {/* FIX 5: Cart header with Hold Sale / Held Sales buttons */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 6 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>Cart ({cart.reduce((s, i) => s + i.qty, 0)} items)</span>
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -505,7 +487,6 @@ export default function POS() {
                   <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{item.name}</div>
-                      {/* FIX 7: currency symbol */}
                       <div style={{ fontSize: 11, color: 'var(--success)' }}>{sym}{item.salePrice.toFixed(2)}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -513,7 +494,6 @@ export default function POS() {
                       <span style={{ fontSize: 13, fontWeight: 700, width: 24, textAlign: 'center' }}>{item.qty}</span>
                       <button className="btn btn-secondary btn-sm" style={{ width: 26, height: 26, padding: 0, justifyContent: 'center' }} onClick={() => updateQty(item.id, 1)}><Plus size={11} /></button>
                     </div>
-                    {/* FIX 7: currency symbol */}
                     <div style={{ fontSize: 13, fontWeight: 700, width: 64, textAlign: 'right' }}>
                       {sym}{(item.salePrice * item.qty).toFixed(2)}
                     </div>
@@ -543,7 +523,7 @@ export default function POS() {
                 </div>
               </div>
 
-              {/* Totals — FIX 7: currency symbol */}
+              {/* Totals */}
               <div style={{ background: 'var(--bg-tertiary)', borderRadius: 8, padding: 12, marginBottom: 10 }}>
                 {[
                   { label: 'Subtotal', value: `${sym}${subtotal.toFixed(2)}` },
@@ -558,7 +538,6 @@ export default function POS() {
                 <div className="divider" style={{ margin: '8px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 800, fontSize: 14 }}>TOTAL</span>
-                  {/* FIX 7: currency symbol */}
                   <span style={{ fontWeight: 900, fontSize: 20, color: 'var(--success)' }}>{sym}{total.toFixed(2)}</span>
                 </div>
               </div>
@@ -593,7 +572,6 @@ export default function POS() {
                     value={cashGiven}
                     onChange={e => setCashGiven(e.target.value)}
                   />
-                  {/* FIX 7: currency symbol in change display */}
                   {cashGiven && parseFloat(cashGiven) >= total && (
                     <div style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 700, marginTop: 6, textAlign: 'center' }}>
                       Change: {sym}{Math.max(0, change).toFixed(2)}
@@ -614,7 +592,7 @@ export default function POS() {
         </div>
       )}
 
-      {/* ─── Return / Refund Tab (FIX 6) ───────────────────────────────────── */}
+      {/* ─── Return / Refund Tab ───────────────────────────────────── */}
       {activeTab === 'return' && (
         <div style={{ maxWidth: 680, margin: '0 auto', width: '100%' }}>
           <div className="card" style={{ padding: 20 }}>
