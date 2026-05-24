@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const SettingRow = ({ label, desc, children }) => (
@@ -217,12 +217,14 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
 
   const set = (k, v) => {
     setSettings(s => ({ ...s, [k]: v }));
@@ -289,6 +291,80 @@ export default function Settings() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* AI & API Configuration */}
+        <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Key size={16} style={{ color: 'var(--primary-light)' }} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>AI & API Configuration</h3>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Claude API — Haiku for monitoring · Sonnet for self-healing</p>
+            </div>
+            {apiKey && (
+              <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>
+                ● Live AI Active
+              </span>
+            )}
+          </div>
+
+          {/* API Key input row */}
+          <SettingRow label="Claude API Key" desc="Your Anthropic API key — stored locally in your browser only">
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  className="form-control"
+                  style={{ width: 280, paddingRight: 36, fontFamily: 'monospace', fontSize: 12 }}
+                  placeholder="sk-ant-api03-..."
+                  value={apiKeyInput}
+                  onChange={e => setApiKeyInput(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(v => !v)}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                >
+                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setApiKey(apiKeyInput);
+                  showToast(apiKeyInput ? 'API key saved — live AI scans enabled' : 'API key cleared', apiKeyInput ? 'success' : 'info');
+                }}
+              >
+                Save Key
+              </button>
+              {apiKey && (
+                <button className="btn btn-danger btn-sm" onClick={() => { setApiKey(''); setApiKeyInput(''); showToast('API key removed', 'info'); }}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </SettingRow>
+
+          {/* Security notice */}
+          <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', marginBottom: 16, fontSize: 12, color: '#D97706' }}>
+            ⚠️ <strong>Security note:</strong> Your API key is stored in browser localStorage and sent directly to Anthropic's API. For production, use a backend proxy server to keep the key server-side.
+          </div>
+
+          {/* Monthly usage stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            {[
+              { label: 'Scans Today',     value: scanStats.scansToday   || 0, unit: '',  color: '#4F46E5' },
+              { label: 'Monthly Scans',   value: scanStats.monthlyScans || 0, unit: '',  color: '#7C3AED' },
+              { label: 'API Cost (mo)',    value: `$${(scanStats.monthlyCost || 0).toFixed(4)}`, unit: '', color: '#10B981' },
+            ].map(s => (
+              <div key={s.label} style={{ padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8, textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}{s.unit}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Currency card — full world list */}
         <div className="card">

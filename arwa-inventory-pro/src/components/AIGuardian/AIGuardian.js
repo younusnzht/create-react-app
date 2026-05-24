@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import {
   Bot, Shield, Zap, Activity, AlertTriangle, CheckCircle, Clock,
   Play, RotateCcw, Lock, Database, Cpu, HardDrive,
-  Server, RefreshCw, ChevronRight, Sparkles
+  Server, RefreshCw, ChevronRight, Sparkles,
+  Key, TrendingUp, Wifi, WifiOff
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { useNavigate } from 'react-router-dom';
+import { PLAN_DAILY_LIMITS, MONTHLY_BUDGETS } from '../../services/claudeAI';
 
 const SEVERITY_CONFIG = {
   critical: { color: '#EF4444', bg: 'rgba(239,68,68,0.12)', label: 'Critical' },
@@ -35,7 +37,7 @@ const MetricCard = ({ label, value, unit, color, icon: Icon, subtext }) => (
 
 
 export default function AIGuardian() {
-  const { aiMetrics, aiIssues, repairHistory, subscription, resolveIssue, runAIScan, showToast } = useApp();
+  const { aiMetrics, aiIssues, repairHistory, subscription, resolveIssue, runAIScan, showToast, apiKey, scanStats } = useApp();
   const [activeTab, setActiveTab] = useState('overview');
   const [scanning, setScanning] = useState(false);
   const navigate = useNavigate();
@@ -112,6 +114,107 @@ export default function AIGuardian() {
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)' }}>{criticalCount} Critical Issue{criticalCount > 1 ? 's' : ''} Detected</p>
             <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Immediate attention required. {canSelfHeal ? 'AI Self-Healing can auto-resolve fixable issues.' : 'Enable AI Self-Healing to auto-resolve issues.'}</p>
           </div>
+        </div>
+      )}
+
+      {/* Daily quota + cost dashboard */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        {/* API Mode card */}
+        <div className="card" style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: apiKey ? 'rgba(16,185,129,0.12)' : 'rgba(107,114,128,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {apiKey ? <Wifi size={16} style={{ color: '#10B981' }} /> : <WifiOff size={16} style={{ color: 'var(--text-muted)' }} />}
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>API Mode</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: apiKey ? '#10B981' : 'var(--text-muted)' }}>
+              {apiKey ? 'Live AI' : 'Demo'}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+              {apiKey ? 'Claude Haiku' : 'No key set'}
+            </div>
+          </div>
+        </div>
+
+        {/* Scans Today card */}
+        {(() => {
+          const limit = PLAN_DAILY_LIMITS[subscription?.plan] || 10;
+          const used  = scanStats.scansToday || 0;
+          const pct   = Math.min(100, (used / limit) * 100);
+          const color = pct >= 100 ? '#EF4444' : pct >= 80 ? '#F59E0B' : '#10B981';
+          return (
+            <div className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Scans Today</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color }}>{used} / {limit}</span>
+              </div>
+              <div className="progress-bar" style={{ height: 6 }}>
+                <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
+              </div>
+              {scanStats.overageToday > 0 && (
+                <div style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>
+                  +{scanStats.overageToday} overage @ $0.005/scan
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Monthly Cost card */}
+        {(() => {
+          const budget = (MONTHLY_BUDGETS[subscription?.plan] || 15) + (subscription?.selfHealing ? MONTHLY_BUDGETS.selfHealing : 0);
+          const cost   = scanStats.monthlyCost || 0;
+          const pct    = Math.min(100, (cost / budget) * 100);
+          const color  = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : '#10B981';
+          return (
+            <div className="card" style={{ padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>API Cost (mo)</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color }}>${cost.toFixed(4)}</span>
+              </div>
+              <div className="progress-bar" style={{ height: 6 }}>
+                <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                Budget: ${budget}/mo (incl. 30% buffer)
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Monthly Scans + last scan card */}
+        <div className="card" style={{ padding: 14 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>This Month</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary-light)' }}>
+            {(scanStats.monthlyScans || 0).toLocaleString()}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>total scans</div>
+          {scanStats.lastScanTime && (
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+              Last: {new Date(scanStats.lastScanTime).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Last scan summary */}
+      {scanStats.lastScanResult && (
+        <div style={{ padding: '10px 16px', borderRadius: 8, background: 'rgba(79,70,229,0.06)', border: '1px solid rgba(79,70,229,0.15)', marginBottom: 16, fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <TrendingUp size={13} style={{ color: 'var(--primary-light)', flexShrink: 0 }} />
+          <span><strong style={{ color: 'var(--text-primary)' }}>Last scan:</strong> {scanStats.lastScanResult}</span>
+        </div>
+      )}
+
+      {/* No API key notice */}
+      {!apiKey && (
+        <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Key size={15} style={{ color: '#D97706', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#D97706' }}>Running in Demo Mode</p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Add your Claude API key in Settings → AI Configuration to enable live scans with real analysis.</p>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={() => window.location.hash = '/settings'} style={{ flexShrink: 0 }}>
+            Go to Settings
+          </button>
         </div>
       )}
 

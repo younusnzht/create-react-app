@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS } from '../data/mockData';
+import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
 
 function loadLS(key, fallback) {
   try {
@@ -9,6 +10,18 @@ function loadLS(key, fallback) {
     return fallback;
   }
 }
+
+const DEFAULT_SCAN_STATS = {
+  date: '',
+  scansToday: 0,
+  overageToday: 0,
+  monthKey: '',
+  monthlyScans: 0,
+  monthlyCost: 0,
+  overageCharges: 0,
+  lastScanResult: null,
+  lastScanTime: null,
+};
 
 const AppContext = createContext(null);
 
@@ -45,6 +58,19 @@ export function AppProvider({ children }) {
   const [aiMetrics, setAiMetrics] = useState(AI_METRICS);
   const [aiIssues, setAiIssues] = useState(AI_ISSUES);
 
+  // AI API config + usage tracking
+  const [apiKey, setApiKeyState] = useState(() => loadLS('arwa_apiKey', ''));
+  const [scanStats, setScanStats] = useState(() => {
+    const stored = loadLS('arwa_scanStats', DEFAULT_SCAN_STATS);
+    // Reset stale daily counts on load
+    const today = new Date().toDateString();
+    const monthKey = new Date().toISOString().slice(0, 7);
+    let s = { ...stored };
+    if (s.date !== today) { s = { ...s, date: today, scansToday: 0, overageToday: 0 }; }
+    if (s.monthKey !== monthKey) { s = { ...s, monthKey, monthlyScans: 0, monthlyCost: 0, overageCharges: 0 }; }
+    return s;
+  });
+
   // subscription
   const [subscription, setSubscription] = useState(() => loadLS('arwa_subscription', {
     plan: 'intermediate',
@@ -56,21 +82,25 @@ export function AppProvider({ children }) {
   }));
 
   // persistence effects
-  useEffect(() => localStorage.setItem('arwa_theme', JSON.stringify(theme)), [theme]);
-  useEffect(() => localStorage.setItem('arwa_colorTheme', JSON.stringify(colorTheme)), [colorTheme]);
-  useEffect(() => localStorage.setItem('arwa_currency', JSON.stringify(currency)), [currency]);
-  useEffect(() => localStorage.setItem('arwa_products', JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem('arwa_users', JSON.stringify(users)), [users]);
-  useEffect(() => localStorage.setItem('arwa_orders', JSON.stringify(orders)), [orders]);
-  useEffect(() => localStorage.setItem('arwa_onlineOrders', JSON.stringify(onlineOrders)), [onlineOrders]);
-  useEffect(() => localStorage.setItem('arwa_suppliers', JSON.stringify(suppliers)), [suppliers]);
-  useEffect(() => localStorage.setItem('arwa_customers', JSON.stringify(customers)), [customers]);
-  useEffect(() => localStorage.setItem('arwa_stockMovements', JSON.stringify(stockMovements)), [stockMovements]);
+  useEffect(() => localStorage.setItem('arwa_theme',         JSON.stringify(theme)),         [theme]);
+  useEffect(() => localStorage.setItem('arwa_colorTheme',    JSON.stringify(colorTheme)),    [colorTheme]);
+  useEffect(() => localStorage.setItem('arwa_currency',      JSON.stringify(currency)),      [currency]);
+  useEffect(() => localStorage.setItem('arwa_products',      JSON.stringify(products)),      [products]);
+  useEffect(() => localStorage.setItem('arwa_users',         JSON.stringify(users)),         [users]);
+  useEffect(() => localStorage.setItem('arwa_orders',        JSON.stringify(orders)),        [orders]);
+  useEffect(() => localStorage.setItem('arwa_onlineOrders',  JSON.stringify(onlineOrders)),  [onlineOrders]);
+  useEffect(() => localStorage.setItem('arwa_suppliers',     JSON.stringify(suppliers)),     [suppliers]);
+  useEffect(() => localStorage.setItem('arwa_customers',     JSON.stringify(customers)),     [customers]);
+  useEffect(() => localStorage.setItem('arwa_stockMovements',JSON.stringify(stockMovements)),[stockMovements]);
   useEffect(() => localStorage.setItem('arwa_notifications', JSON.stringify(notifications)), [notifications]);
-  useEffect(() => localStorage.setItem('arwa_subscription', JSON.stringify(subscription)), [subscription]);
+  useEffect(() => localStorage.setItem('arwa_subscription',  JSON.stringify(subscription)),  [subscription]);
+  useEffect(() => localStorage.setItem('arwa_scanStats',     JSON.stringify(scanStats)),     [scanStats]);
+  useEffect(() => localStorage.setItem('arwa_apiKey',        JSON.stringify(apiKey)),        [apiKey]);
   useEffect(() => {
     localStorage.setItem('arwa_auth', JSON.stringify({ isAuthenticated, currentUser }));
   }, [isAuthenticated, currentUser]);
+
+  // ─── helpers ──────────────────────────────────────────────────────────────
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
@@ -81,36 +111,32 @@ export function AppProvider({ children }) {
     setTheme(t => t === 'dark' ? 'light' : 'dark');
   }, []);
 
-  // stock movement audit
+  const setApiKey = useCallback((key) => {
+    setApiKeyState(key.trim());
+  }, []);
+
+  // ─── stock movement audit ──────────────────────────────────────────────────
+
   const addStockMovement = useCallback(({ productId, productName, type, qty, note }) => {
-    setStockMovements(prev => [
-      {
-        id: Date.now(),
-        productId,
-        productName,
-        type,
-        qty,
-        userId: currentUser ? currentUser.id : null,
-        userName: currentUser ? currentUser.name : 'System',
-        time: new Date().toISOString(),
-        note: note || '',
-      },
-      ...prev,
-    ]);
+    setStockMovements(prev => [{
+      id: Date.now(), productId, productName, type, qty,
+      userId:   currentUser ? currentUser.id   : null,
+      userName: currentUser ? currentUser.name : 'System',
+      time: new Date().toISOString(),
+      note: note || '',
+    }, ...prev]);
   }, [currentUser]);
 
+  // ─── products ─────────────────────────────────────────────────────────────
+
   const addProduct = useCallback((product) => {
-    const plan = SUBSCRIPTION_PLANS[subscription.plan];
+    const plan  = SUBSCRIPTION_PLANS[subscription.plan];
     const limit = plan ? plan.products : -1;
     if (limit !== -1 && products.length >= limit) {
-      showToast(
-        `Product limit reached for your ${plan.name} plan (${limit} products). Upgrade to add more.`,
-        'warning'
-      );
+      showToast(`Product limit reached for your ${plan.name} plan (${limit} products). Upgrade to add more.`, 'warning');
       return;
     }
-    const newProduct = { ...product, id: Date.now(), status: product.status || 'active' };
-    setProducts(prev => [newProduct, ...prev]);
+    setProducts(prev => [{ ...product, id: Date.now(), status: product.status || 'active' }, ...prev]);
     showToast(`Product "${product.name}" added successfully`);
   }, [products, subscription, showToast]);
 
@@ -119,12 +145,9 @@ export function AppProvider({ children }) {
       if (p.id !== id) return p;
       const merged = { ...p, ...updates };
       if (updates.stock !== undefined && updates.stock !== p.stock) {
-        const delta = updates.stock - p.stock;
         addStockMovement({
-          productId: id,
-          productName: p.name,
-          type: 'adjustment',
-          qty: delta,
+          productId: id, productName: p.name,
+          type: 'adjustment', qty: updates.stock - p.stock,
           note: updates._movementNote || 'Product updated',
         });
       }
@@ -138,105 +161,180 @@ export function AppProvider({ children }) {
     setProducts(prev => {
       const product = prev.find(p => p.id === id);
       if (product && product.stock > 0) {
-        addStockMovement({
-          productId: id,
-          productName: product.name,
-          type: 'adjustment',
-          qty: -product.stock,
-          note: 'Product deleted from system',
-        });
+        addStockMovement({ productId: id, productName: product.name, type: 'adjustment', qty: -product.stock, note: 'Product deleted from system' });
       }
       return prev.filter(p => p.id !== id);
     });
     showToast('Product deleted', 'info');
   }, [showToast, addStockMovement]);
 
-  const addSupplier = useCallback((s) => {
-    setSuppliers(prev => [{ ...s, id: Date.now() }, ...prev]);
-    showToast(`Supplier "${s.name}" added successfully`);
-  }, [showToast]);
+  // ─── suppliers / customers / users ────────────────────────────────────────
 
-  const updateSupplier = useCallback((id, updates) => {
-    setSuppliers(prev => prev.map(s => (s.id === id ? { ...s, ...updates } : s)));
-    showToast('Supplier updated successfully');
-  }, [showToast]);
-
-  const updateOnlineOrderStatus = useCallback((id, newStatus) => {
-    setOnlineOrders(prev => prev.map(o => (o.id === id ? { ...o, status: newStatus } : o)));
-  }, []);
-
-  const addOnlineOrder = useCallback((order) => {
-    setOnlineOrders(prev => [{ ...order, id: order.id || `OO-${Date.now()}` }, ...prev]);
-  }, []);
-
-  const addOrder = useCallback((order) => {
-    const newOrder = {
-      ...order,
-      id: order.id || `ORD-${Date.now()}`,
-      date: order.date || new Date().toISOString(),
-    };
-    setOrders(prev => [newOrder, ...prev]);
-  }, []);
-
-  const addCustomer = useCallback((c) => {
-    setCustomers(prev => [{ ...c, id: Date.now() }, ...prev]);
-    showToast(`Customer "${c.name}" added successfully`);
-  }, [showToast]);
-
-  const updateCustomer = useCallback((id, updates) => {
-    setCustomers(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
-    showToast('Customer updated successfully');
-  }, [showToast]);
-
-  const deleteCustomer = useCallback((id) => {
-    setCustomers(prev => prev.filter(c => c.id !== id));
-    showToast('Customer removed', 'info');
-  }, [showToast]);
+  const addSupplier    = useCallback((s) => { setSuppliers(prev => [{ ...s, id: Date.now() }, ...prev]); showToast(`Supplier "${s.name}" added successfully`); }, [showToast]);
+  const updateSupplier = useCallback((id, u) => { setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...u } : s)); showToast('Supplier updated successfully'); }, [showToast]);
+  const addCustomer    = useCallback((c) => { setCustomers(prev => [{ ...c, id: Date.now() }, ...prev]); showToast(`Customer "${c.name}" added successfully`); }, [showToast]);
+  const updateCustomer = useCallback((id, u) => { setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...u } : c)); showToast('Customer updated successfully'); }, [showToast]);
+  const deleteCustomer = useCallback((id) => { setCustomers(prev => prev.filter(c => c.id !== id)); showToast('Customer removed', 'info'); }, [showToast]);
 
   const addUser = useCallback((u) => {
-    const plan = SUBSCRIPTION_PLANS[subscription.plan];
+    const plan  = SUBSCRIPTION_PLANS[subscription.plan];
     const limit = plan ? plan.users : -1;
     if (limit !== -1 && users.length >= limit) {
-      showToast(
-        `User limit reached for your ${plan.name} plan (${limit} accounts). Upgrade to add more.`,
-        'warning'
-      );
+      showToast(`User limit reached for your ${plan.name} plan (${limit} accounts). Upgrade to add more.`, 'warning');
       return;
     }
     setUsers(prev => [...prev, { ...u, id: Date.now() }]);
     showToast(`User "${u.name}" added successfully`);
   }, [users, subscription, showToast]);
 
-  const deleteUser = useCallback((id) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
-    showToast('User removed', 'info');
-  }, [showToast]);
+  const deleteUser = useCallback((id) => { setUsers(prev => prev.filter(u => u.id !== id)); showToast('User removed', 'info'); }, [showToast]);
 
-  const addRepair = useCallback((repair) => {
-    setRepairHistory(prev => [{ ...repair, id: Date.now(), time: new Date().toISOString() }, ...prev]);
+  // ─── orders ───────────────────────────────────────────────────────────────
+
+  const addOrder            = useCallback((o) => { setOrders(prev => [{ ...o, id: o.id || `ORD-${Date.now()}`, date: o.date || new Date().toISOString() }, ...prev]); }, []);
+  const addOnlineOrder      = useCallback((o) => { setOnlineOrders(prev => [{ ...o, id: o.id || `OO-${Date.now()}` }, ...prev]); }, []);
+  const updateOnlineOrderStatus = useCallback((id, status) => { setOnlineOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o)); }, []);
+
+  // ─── notifications / repairs ──────────────────────────────────────────────
+
+  const markNotificationRead = useCallback((id) => { setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n)); }, []);
+  const addRepair = useCallback((r) => { setRepairHistory(prev => [{ ...r, id: Date.now(), time: new Date().toISOString() }, ...prev]); }, []);
+
+  // ─── scan stats helpers ───────────────────────────────────────────────────
+
+  const getFreshStats = useCallback((prev) => {
+    const today    = new Date().toDateString();
+    const monthKey = new Date().toISOString().slice(0, 7);
+    let s = { ...prev };
+    if (s.date     !== today)    { s = { ...s, date: today, scansToday: 0, overageToday: 0 }; }
+    if (s.monthKey !== monthKey) { s = { ...s, monthKey, monthlyScans: 0, monthlyCost: 0, overageCharges: 0 }; }
+    return s;
   }, []);
 
-  const markNotificationRead = useCallback((id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  }, []);
+  // ─── AI scan (Haiku + prompt caching) ─────────────────────────────────────
 
-  const resolveIssue = useCallback((id) => {
-    setAiIssues(prev => prev.map(i => i.id === id ? { ...i, status: 'resolved' } : i));
-    showToast('Issue marked as resolved');
-  }, [showToast]);
+  const runAIScan = useCallback(async () => {
+    const limit    = PLAN_DAILY_LIMITS[subscription.plan] || 10;
+    const freshStats = getFreshStats(scanStats);
+    const isOverage  = freshStats.scansToday >= limit;
 
-  const runAIScan = useCallback(() => {
+    // Block non-Enterprise plans at the limit
+    if (isOverage && subscription.plan !== 'super') {
+      showToast(`Daily scan limit reached (${limit}/day on your plan). Upgrade for more.`, 'warning');
+      return;
+    }
+
+    // Increment the mock counter immediately so UI updates
     setAiMetrics(prev => ({ ...prev, scansToday: prev.scansToday + 1 }));
-    showToast('AI scan initiated — analyzing system...', 'info');
-  }, [showToast]);
+
+    if (!apiKey) {
+      // Demo mode — update counts with no real API cost
+      setScanStats(prev => {
+        const s = getFreshStats(prev);
+        return { ...s, scansToday: s.scansToday + 1, monthlyScans: s.monthlyScans + 1, lastScanTime: new Date().toISOString() };
+      });
+      showToast('Scan complete (demo) — add Claude API key in Settings for live AI', 'info');
+      return;
+    }
+
+    showToast('AI scan started — Claude Haiku analysing...', 'info');
+
+    try {
+      const { runAIScan: callScan } = await import('./claudeAIHelper');
+      const { result, cost } = await callScan({ apiKey, metrics: aiMetrics, products, issues: aiIssues });
+
+      // Apply real health scores
+      setAiMetrics(prev => ({
+        ...prev,
+        healthScore:      result.healthScore      ?? prev.healthScore,
+        performanceScore: result.performanceScore ?? prev.performanceScore,
+        securityScore:    result.securityScore    ?? prev.securityScore,
+        stabilityScore:   result.stabilityScore   ?? prev.stabilityScore,
+        scansToday:       prev.scansToday + 1,
+        issuesDetected:   prev.issuesDetected + (result.issues?.length || 0),
+      }));
+
+      // Merge new AI-detected issues (prepend, keep resolved old ones)
+      if (result.issues?.length) {
+        setAiIssues(prev => [
+          ...result.issues.map((iss, i) => ({
+            ...iss,
+            id:       Date.now() + i,
+            detected: new Date().toISOString(),
+            status:   'pending',
+          })),
+          ...prev.filter(i => i.status === 'resolved'),
+        ]);
+      }
+
+      // Track cost + overage
+      const overageFee = isOverage ? OVERAGE_COST_PER_SCAN : 0;
+      setScanStats(prev => {
+        const s = getFreshStats(prev);
+        return {
+          ...s,
+          scansToday:      s.scansToday + 1,
+          overageToday:    isOverage ? s.overageToday + 1 : s.overageToday,
+          monthlyScans:    s.monthlyScans + 1,
+          monthlyCost:     parseFloat((s.monthlyCost + cost).toFixed(6)),
+          overageCharges:  parseFloat((s.overageCharges + overageFee).toFixed(4)),
+          lastScanResult:  result.summary || 'Scan complete',
+          lastScanTime:    new Date().toISOString(),
+        };
+      });
+
+      showToast(`AI scan complete — Health: ${result.healthScore ?? '?'}/100`, 'success');
+    } catch (err) {
+      showToast(`AI scan failed: ${err.message}`, 'error');
+    }
+  }, [subscription, scanStats, apiKey, aiMetrics, products, aiIssues, showToast, getFreshStats]);
+
+  // ─── AI self-healing (Sonnet) ─────────────────────────────────────────────
+
+  const resolveIssue = useCallback(async (id) => {
+    const issue = aiIssues.find(i => i.id === id);
+
+    if (apiKey && subscription.selfHealing && issue?.autoFixable) {
+      showToast('Self-Healing: Claude Sonnet analysing...', 'info');
+      try {
+        const { runSelfHeal } = await import('./claudeAIHelper');
+        const systemContext = {
+          plan:         subscription.plan,
+          metrics:      aiMetrics,
+          productCount: products.length,
+          userCount:    users.length,
+        };
+        const { result, cost } = await runSelfHeal({ apiKey, issue, systemContext });
+
+        addRepair({
+          action:      result.repairSteps?.[0]?.action || `Auto-fixed: ${issue.title}`,
+          module:      issue.module,
+          result:      result.confidence > 65 ? 'success' : 'rolled_back',
+          improvement: result.estimatedImpact || 'Issue resolved',
+        });
+
+        setScanStats(prev => ({
+          ...prev,
+          monthlyCost: parseFloat((prev.monthlyCost + cost).toFixed(6)),
+        }));
+
+        setAiIssues(prev => prev.map(i => i.id === id ? { ...i, status: 'resolved' } : i));
+        setAiMetrics(prev => ({ ...prev, issuesResolved: prev.issuesResolved + 1 }));
+        showToast(`Self-Healing complete — ${result.estimatedImpact || 'Issue resolved'}`, 'success');
+      } catch (err) {
+        showToast(`Self-Healing error: ${err.message}`, 'error');
+      }
+    } else {
+      setAiIssues(prev => prev.map(i => i.id === id ? { ...i, status: 'resolved' } : i));
+      showToast('Issue marked as resolved');
+    }
+  }, [aiIssues, apiKey, subscription, aiMetrics, products, users, addRepair, showToast]);
+
+  // ─── auth ─────────────────────────────────────────────────────────────────
 
   const login = useCallback((email, password) => {
     const found = users.find(u => u.email === email && u.password === password);
-    if (found) {
-      setCurrentUser(found);
-      setIsAuthenticated(true);
-      return true;
-    }
+    if (found) { setCurrentUser(found); setIsAuthenticated(true); return true; }
     return false;
   }, [users]);
 
@@ -248,38 +346,29 @@ export function AppProvider({ children }) {
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
+  // ─── context value ────────────────────────────────────────────────────────
+
   const value = useMemo(() => ({
-    // UI
-    theme, toggleTheme,
-    colorTheme, setColorTheme,
+    theme, toggleTheme, colorTheme, setColorTheme,
     currency, setCurrency,
     sidebarCollapsed, setSidebarCollapsed,
     toast, showToast,
-    // Auth
     isAuthenticated, currentUser, login, logout,
-    // Products
     products, setProducts, addProduct, updateProduct, deleteProduct,
-    // Suppliers
     suppliers, setSuppliers, addSupplier, updateSupplier,
-    // Customers
     customers, setCustomers, addCustomer, updateCustomer, deleteCustomer,
-    // Users
     users, setUsers, addUser, deleteUser,
-    // Orders
     orders, setOrders, addOrder,
-    // Online Orders
     onlineOrders, setOnlineOrders, updateOnlineOrderStatus, addOnlineOrder,
-    // Notifications
     notifications, markNotificationRead, unreadCount,
-    // AI
     aiMetrics, setAiMetrics,
     aiIssues, setAiIssues,
     repairHistory, addRepair,
     resolveIssue, runAIScan,
-    // Stock movements
     stockMovements, addStockMovement,
-    // Subscription
     subscription, setSubscription,
+    apiKey, setApiKey,
+    scanStats,
   }), [
     theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -294,13 +383,10 @@ export function AppProvider({ children }) {
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
     subscription,
+    apiKey, setApiKey, scanStats,
   ]);
 
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export const useApp = () => {
