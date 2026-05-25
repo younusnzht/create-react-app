@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Clock, CheckCircle, Truck, XCircle, Globe, ChevronDown, ChevronUp, RefreshCw, MapPin, User, DollarSign } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle, Truck, XCircle, Globe, ChevronDown, ChevronUp, RefreshCw, MapPin, User, DollarSign, Wifi, WifiOff, Zap, Plus } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const PLATFORMS = [
@@ -150,7 +150,7 @@ function OrderCard({ order, onStatusChange, currencyCode }) {
 }
 
 export default function OnlineOrders() {
-  const { onlineOrders: orders, updateOnlineOrderStatus, addOnlineOrder, showToast, currency } = useApp();
+  const { onlineOrders: orders, updateOnlineOrderStatus, addOnlineOrder, showToast, currency, wsStatus, wsClient } = useApp();
   const [activePlatform, setActivePlatform] = useState('all');
   const [activeStatus, setActiveStatus] = useState('all');
   const [showNewModal, setShowNewModal] = useState(false);

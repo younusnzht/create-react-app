@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS } from '../data/mockData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
+import wsClient from '../services/websocket';
 
 function loadLS(key, fallback) {
   try {
@@ -80,6 +81,9 @@ export function AppProvider({ children }) {
     return s;
   });
 
+  // ─── WebSocket connection status ──────────────────────────────────────────
+  const [wsStatus, setWsStatus] = useState('disconnected'); // disconnected|connecting|connected
+
   // subscription
   const [subscription, setSubscription] = useState(() => loadLS('arwa_subscription', {
     plan: 'intermediate',
@@ -104,6 +108,63 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_notifications', JSON.stringify(notifications)), [notifications]);
   useEffect(() => localStorage.setItem('arwa_subscription',  JSON.stringify(subscription)),  [subscription]);
   useEffect(() => localStorage.setItem('arwa_scanStats',     JSON.stringify(scanStats)),     [scanStats]);
+
+  // ─── WebSocket — connect on mount, handle live order events ──────────────
+  useEffect(() => {
+    // Register status change callback
+    wsClient.onStatusChange = (s) => setWsStatus(s);
+
+    // Snapshot: server sends full order list on connect
+    const offSnapshot = wsClient.on('snapshot', ({ orders: serverOrders }) => {
+      if (serverOrders && serverOrders.length > 0) {
+        setOnlineOrders(prev => {
+          // Merge: server orders take precedence, keep any local-only orders
+          const serverIds = new Set(serverOrders.map(o => String(o.id)));
+          const localOnly = prev.filter(o => !serverIds.has(String(o.id)));
+          return [...serverOrders, ...localOnly];
+        });
+      }
+    });
+
+    // New order arriving from platform
+    const offNew = wsClient.on('new_order', (order) => {
+      setOnlineOrders(prev => {
+        if (prev.find(o => String(o.id) === String(order.id))) return prev;
+        return [order, ...prev];
+      });
+      // Auto-deduct inventory for confirmed items
+      setProducts(prev => prev.map(product => {
+        const ordered = (order.items || []).find(i =>
+          product.name.toLowerCase().includes(i.name.toLowerCase()) ||
+          i.name.toLowerCase().includes(product.name.toLowerCase())
+        );
+        if (!ordered) return product;
+        const newStock = Math.max(0, (product.stock || 0) - ordered.qty);
+        return { ...product, stock: newStock };
+      }));
+    });
+
+    // Order status updated (from platform or another client)
+    const offUpdated = wsClient.on('order_updated', (order) => {
+      setOnlineOrders(prev =>
+        prev.map(o => String(o.id) === String(order.id) ? { ...o, ...order } : o)
+      );
+    });
+
+    // Order deleted
+    const offDeleted = wsClient.on('order_deleted', ({ id }) => {
+      setOnlineOrders(prev => prev.filter(o => String(o.id) !== String(id)));
+    });
+
+    // Attempt connection (will silently retry if backend isn't running)
+    wsClient.connect();
+
+    return () => {
+      offSnapshot(); offNew(); offUpdated(); offDeleted();
+      wsClient.disconnect();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => localStorage.setItem('arwa_apiKey',        JSON.stringify(apiKey)),        [apiKey]);
   useEffect(() => {
     localStorage.setItem('arwa_auth', JSON.stringify({ isAuthenticated, currentUser }));
@@ -381,6 +442,7 @@ export function AppProvider({ children }) {
     subscription, setSubscription,
     apiKey, setApiKey,
     scanStats,
+    wsStatus, wsClient,
   }), [
     theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -395,7 +457,7 @@ export function AppProvider({ children }) {
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
     subscription,
-    apiKey, setApiKey, scanStats,
+    apiKey, setApiKey, scanStats, wsStatus,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
