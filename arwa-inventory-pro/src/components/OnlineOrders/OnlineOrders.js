@@ -150,6 +150,7 @@ function OrderCard({ order, onStatusChange, currencyCode }) {
 }
 
 export default function OnlineOrders() {
+  // eslint-disable-next-line no-unused-vars
   const { onlineOrders: orders, updateOnlineOrderStatus, addOnlineOrder, showToast, currency, wsStatus, wsClient } = useApp();
   const [activePlatform, setActivePlatform] = useState('all');
   const [activeStatus, setActiveStatus] = useState('all');
@@ -199,15 +200,33 @@ export default function OnlineOrders() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>Online Orders</h1>
-          <p>Uber Eats · DoorDash · Skip · Website · Phone — all in one queue</p>
+          <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {wsStatus === 'connected'
+              ? <><Wifi size={12} style={{ color: 'var(--success)' }} /><span style={{ color: 'var(--success)', fontWeight: 700 }}>Live Sync Active</span></>
+              : wsStatus === 'connecting'
+              ? <><RefreshCw size={12} style={{ color: '#F59E0B', animation: 'spin 1s linear infinite' }} /><span style={{ color: '#F59E0B', fontWeight: 700 }}>Connecting…</span></>
+              : <><WifiOff size={12} style={{ color: 'var(--text-muted)' }} /><span style={{ color: 'var(--text-muted)' }}>Offline — orders shown from local data</span></>
+            }
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary" onClick={() => { showToast('Syncing all platforms...', 'info'); }}>
-            <RefreshCw size={14} /> Sync
-          </button>
-          <button className="btn btn-primary" onClick={() => setShowNewModal(true)}>
-            <ShoppingBag size={14} /> New Order
-          </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {/* Demo order button — inject a test order via backend */}
+          {wsStatus === 'connected' && (
+            <button className="btn btn-secondary" onClick={() => {
+              fetch('http://localhost:4000/api/orders/demo', { method: 'POST' })
+                .then(r => r.json())
+                .then(order => console.log('[Demo] Injected order:', order.id))
+                .catch(() => {});
+            }}>
+              <Plus size={14} /> Demo Order
+            </button>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: wsStatus === 'connected' ? 'rgba(16,185,129,0.1)' : 'var(--bg-tertiary)', border: `1px solid ${wsStatus === 'connected' ? 'rgba(16,185,129,0.3)' : 'var(--border)'}` }}>
+            <Zap size={13} style={{ color: wsStatus === 'connected' ? 'var(--success)' : 'var(--text-muted)' }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: wsStatus === 'connected' ? 'var(--success)' : 'var(--text-muted)' }}>
+              {orders.filter(o => o.status === 'new').length} new
+            </span>
+          </div>
         </div>
       </div>
 
