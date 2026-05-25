@@ -45,7 +45,16 @@ export function AppProvider({ children }) {
 
   // data
   const [products, setProducts] = useState(() => loadLS('arwa_products', PRODUCTS));
-  const [users, setUsers] = useState(() => loadLS('arwa_users', USERS));
+  const [users, setUsers] = useState(() => {
+    // Merge stored users with mock USERS so password field is always present
+    // (old localStorage entries may have been saved before passwords were added)
+    const stored = loadLS('arwa_users', USERS);
+    return stored.map(u => {
+      if (u.password) return u;
+      const mock = USERS.find(m => m.id === u.id || m.email === u.email);
+      return mock ? { ...u, password: mock.password } : u;
+    });
+  });
   const [orders, setOrders] = useState(() => loadLS('arwa_orders', ORDERS));
   const [onlineOrders, setOnlineOrders] = useState(() => loadLS('arwa_onlineOrders', ONLINE_ORDERS));
   const [suppliers, setSuppliers] = useState(() => loadLS('arwa_suppliers', SUPPLIERS));
@@ -333,7 +342,10 @@ export function AppProvider({ children }) {
   // ─── auth ─────────────────────────────────────────────────────────────────
 
   const login = useCallback((email, password) => {
-    const found = users.find(u => u.email === email && u.password === password);
+    // Check live users state first; fall back to mock USERS so demo credentials
+    // always work even if localStorage data is missing the password field.
+    const found = users.find(u => u.email === email && u.password === password)
+      || USERS.find(u => u.email === email && u.password === password);
     if (found) { setCurrentUser(found); setIsAuthenticated(true); return true; }
     return false;
   }, [users]);
