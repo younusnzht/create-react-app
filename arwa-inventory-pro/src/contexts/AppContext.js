@@ -94,6 +94,10 @@ export function AppProvider({ children }) {
     trialDaysLeft: 0,
   }));
 
+  // ─── onboarding ───────────────────────────────────────────────────────────
+  const [onboarded, setOnboarded] = useState(() => loadLS('arwa_onboarded', false));
+  const [businessName, setBusinessName] = useState(() => loadLS('arwa_businessName', 'Arwa Enterprises'));
+
   // persistence effects
   useEffect(() => localStorage.setItem('arwa_theme',         JSON.stringify(theme)),         [theme]);
   useEffect(() => localStorage.setItem('arwa_colorTheme',    JSON.stringify(colorTheme)),    [colorTheme]);
@@ -108,6 +112,8 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_notifications', JSON.stringify(notifications)), [notifications]);
   useEffect(() => localStorage.setItem('arwa_subscription',  JSON.stringify(subscription)),  [subscription]);
   useEffect(() => localStorage.setItem('arwa_scanStats',     JSON.stringify(scanStats)),     [scanStats]);
+  useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
+  useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
 
   // ─── WebSocket — connect on mount, handle live order events ──────────────
   useEffect(() => {
@@ -183,6 +189,11 @@ export function AppProvider({ children }) {
 
   const setApiKey = useCallback((key) => {
     setApiKeyState(key.trim());
+  }, []);
+
+  const completeOnboarding = useCallback((name) => {
+    if (name && name.trim()) setBusinessName(name.trim());
+    setOnboarded(true);
   }, []);
 
   // ─── stock movement audit ──────────────────────────────────────────────────
@@ -443,6 +454,7 @@ export function AppProvider({ children }) {
     apiKey, setApiKey,
     scanStats,
     wsStatus, wsClient,
+    onboarded, businessName, completeOnboarding,
   }), [
     theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -457,7 +469,7 @@ export function AppProvider({ children }) {
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
     subscription,
-    apiKey, setApiKey, scanStats, wsStatus,
+    apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName, completeOnboarding,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

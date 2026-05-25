@@ -16,17 +16,19 @@ import Suppliers from './components/Suppliers/Suppliers';
 import Settings from './components/Settings/Settings';
 import OnlineOrders from './components/OnlineOrders/OnlineOrders';
 import Login from './components/Auth/Login';
+import OnboardingWizard from './components/Onboarding/OnboardingWizard';
 import ErrorBoundary from './components/ErrorBoundary';
 import CustomerManagement from './components/Customers/CustomerManagement';
 
 function AppLayout() {
-  const { theme, colorTheme, isAuthenticated } = useApp();
+  const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <div data-theme={theme} data-color-theme={colorTheme} className="app-layout">
+      {!onboarded && <OnboardingWizard />}
       <Sidebar />
       <div className="main-content">
         <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
