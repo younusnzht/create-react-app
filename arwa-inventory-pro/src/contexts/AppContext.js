@@ -65,6 +65,9 @@ export function AppProvider({ children }) {
   const [stockTransfers, setStockTransfers] = useState(() => loadLS('arwa_stockTransfers', []));
   const [backorders, setBackorders] = useState(() => loadLS('arwa_backorders', []));
   const [payrollRecords, setPayrollRecords] = useState(() => loadLS('arwa_payrollRecords', []));
+  const [customerInvoices, setCustomerInvoices] = useState(() => loadLS('arwa_customerInvoices', []));
+  const [expenses, setExpenses] = useState(() => loadLS('arwa_expenses', []));
+  const [chartOfAccounts, setChartOfAccounts] = useState(() => loadLS('arwa_chartOfAccounts', null));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
   const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
@@ -134,6 +137,8 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_taxConfig',       JSON.stringify(taxConfig)),       [taxConfig]);
   useEffect(() => localStorage.setItem('arwa_costingMethod',   JSON.stringify(costingMethod)),   [costingMethod]);
   useEffect(() => localStorage.setItem('arwa_payrollRecords', JSON.stringify(payrollRecords)), [payrollRecords]);
+  useEffect(() => localStorage.setItem('arwa_customerInvoices', JSON.stringify(customerInvoices)), [customerInvoices]);
+  useEffect(() => localStorage.setItem('arwa_expenses',         JSON.stringify(expenses)),         [expenses]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -248,6 +253,10 @@ export function AppProvider({ children }) {
   // ─── stock movement audit ──────────────────────────────────────────────────
 
   const addPayrollRecord = useCallback((r) => setPayrollRecords(prev => [r, ...prev]), []);
+
+  const addCustomerInvoice    = useCallback((inv) => setCustomerInvoices(prev => [inv, ...prev]), []);
+  const updateCustomerInvoice = useCallback((id, data) => setCustomerInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...data } : inv)), []);
+  const addExpense             = useCallback((e) => setExpenses(prev => [e, ...prev]), []);
 
   const addStockMovement = useCallback(({ productId, productName, type, qty, note }) => {
     setStockMovements(prev => [{
@@ -509,6 +518,9 @@ export function AppProvider({ children }) {
     taxConfig, setTaxConfig, calcOrderTax,
     costingMethod, setCostingMethod,
     payrollRecords, addPayrollRecord,
+    customerInvoices, addCustomerInvoice, updateCustomerInvoice,
+    expenses, addExpense,
+    chartOfAccounts,
     purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     stockTransfers, addStockTransfer,
     backorders, addBackorder, updateBackorder,
@@ -530,6 +542,8 @@ export function AppProvider({ children }) {
     apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
     taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
     costingMethod, payrollRecords, addPayrollRecord,
+    customerInvoices, addCustomerInvoice, updateCustomerInvoice,
+    expenses, addExpense,
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,

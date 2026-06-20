@@ -7,7 +7,7 @@ const getCurrencySymbol = (code) => {
   return s[code] || code + ' ';
 };
 
-const BLANK_FORM = { name: '', email: '', phone: '', loyaltyPoints: 0 };
+const BLANK_FORM = { name: '', email: '', phone: '', loyaltyPoints: 0, gstExempt: false, exemptionCertificate: '' };
 
 export default function CustomerManagement() {
   const { customers, addCustomer, updateCustomer, deleteCustomer, currency } = useApp();
@@ -45,7 +45,7 @@ export default function CustomerManagement() {
 
   const openEdit = (c) => {
     setEditingId(c.id);
-    setForm({ name: c.name, email: c.email, phone: c.phone || '', loyaltyPoints: c.loyaltyPoints || 0 });
+    setForm({ name: c.name, email: c.email, phone: c.phone || '', loyaltyPoints: c.loyaltyPoints || 0, gstExempt: c.gstExempt || false, exemptionCertificate: c.exemptionCertificate || '' });
     setErrors({});
     setShowModal(true);
   };
@@ -61,7 +61,7 @@ export default function CustomerManagement() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     if (editingId) {
-      updateCustomer(editingId, { name: form.name, email: form.email, phone: form.phone, loyaltyPoints: Number(form.loyaltyPoints) || 0 });
+      updateCustomer(editingId, { name: form.name, email: form.email, phone: form.phone, loyaltyPoints: Number(form.loyaltyPoints) || 0, gstExempt: form.gstExempt, exemptionCertificate: form.exemptionCertificate });
     } else {
       addCustomer({
         ...form,
@@ -179,7 +179,12 @@ export default function CustomerManagement() {
                             fontSize: 13, fontWeight: 700, color: 'white', flexShrink: 0,
                           }}>{c.name.charAt(0).toUpperCase()}</div>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
+                            <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {c.name}
+                              {c.gstExempt && (
+                                <span style={{ background: 'rgba(249,115,22,0.12)', color: '#EA580C', padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700 }}>Tax Exempt</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -286,6 +291,21 @@ export default function CustomerManagement() {
                 onChange={e => setField('loyaltyPoints', e.target.value)}
                 placeholder="0"
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">GST/HST Exempt</label>
+              <select className="form-control" value={form.gstExempt || false} onChange={e => setField('gstExempt', e.target.value === 'true')}>
+                <option value="false">Taxable (default)</option>
+                <option value="true">Exempt — has exemption certificate</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Exemption Certificate #</label>
+              <input className="form-control" placeholder="e.g. First Nations Band #, diplomatic, etc."
+                value={form.exemptionCertificate || ''}
+                onChange={e => setField('exemptionCertificate', e.target.value)}
+                disabled={!form.gstExempt} />
             </div>
 
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>

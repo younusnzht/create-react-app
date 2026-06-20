@@ -15,6 +15,19 @@ const getCurrencySymbol = (code) => {
   return symbols[code] || code + ' ';
 };
 
+// ── Tax Number Validators ────────────────────────────────────────────────────
+function validateGSTNumber(num) {
+  const clean = (num || '').replace(/[\s\-]/g, '').toUpperCase();
+  return /^\d{9}RT\d{4}$/.test(clean);
+}
+function validateQSTNumber(num) {
+  const clean = (num || '').replace(/[\s\-]/g, '').toUpperCase();
+  return /^\d{10}TQ\d{4}$/.test(clean) || /^1\d{9}TQ\d{4}$/.test(clean);
+}
+function validatePSTNumber(num) {
+  return num && num.trim().length >= 4;
+}
+
 export default function CanadianTax() {
   const { taxConfig, setTaxConfig, showToast, currency, auditLog, orders, purchaseOrders } = useApp();
   const sym = getCurrencySymbol(currency || 'USD');
@@ -98,6 +111,44 @@ export default function CanadianTax() {
     return { collected, itc, federalCollected, netRemittance, deadline, orderCount: periodOrders.length, poCount: periodPOs.length };
   }, [orders, purchaseOrders, filingPeriod, filingDate]);
 
+  // ── Compliance Tab computations ──────────────────────────────────────────
+  const annualRevenue = useMemo(() => {
+    const thisYear = new Date().getFullYear();
+    return (orders || [])
+      .filter(o => new Date(o.date || o.createdAt || '').getFullYear() === thisYear)
+      .reduce((s, o) => s + (o.total || 0), 0);
+  }, [orders]);
+
+  const filingFrequency = annualRevenue >= 6000000 ? 'Monthly'
+    : annualRevenue >= 1500000 ? 'Quarterly'
+    : 'Annually';
+  const filingFrequencyNote = annualRevenue >= 6000000
+    ? 'Required by CRA for businesses with >$6M annual taxable supplies. Due by 28th of the following month.'
+    : annualRevenue >= 1500000
+    ? 'Required by CRA for businesses with $1.5M–$6M annual taxable supplies. Due 28 days after quarter end.'
+    : 'For businesses with <$1.5M annual taxable supplies. Due 3 months after fiscal year end.';
+
+  const remittanceCalendar = useMemo(() => {
+    const year = new Date().getFullYear();
+    if (filingFrequency === 'Monthly') {
+      return Array.from({ length: 12 }, (_, i) => {
+        const dueMonth = i + 2 > 12 ? 1 : i + 2;
+        const dueYear  = i + 2 > 12 ? year + 1 : year;
+        const due = new Date(dueYear, dueMonth - 1, 28);
+        return { label: new Date(year, i, 1).toLocaleString('default', { month: 'long' }), due, period: `${year}-${String(i+1).padStart(2,'0')}` };
+      });
+    }
+    if (filingFrequency === 'Quarterly') {
+      return [
+        { label: 'Q1 (Jan–Mar)', due: new Date(year, 3, 28), period: `Jan–Mar ${year}` },
+        { label: 'Q2 (Apr–Jun)', due: new Date(year, 6, 28), period: `Apr–Jun ${year}` },
+        { label: 'Q3 (Jul–Sep)', due: new Date(year, 9, 28), period: `Jul–Sep ${year}` },
+        { label: 'Q4 (Oct–Dec)', due: new Date(year + 1, 0, 28), period: `Oct–Dec ${year}` },
+      ];
+    }
+    return [{ label: `Annual ${year}`, due: new Date(year + 1, 2, 31), period: `${year}` }];
+  }, [filingFrequency]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
@@ -120,6 +171,9 @@ export default function CanadianTax() {
         </button>
         <button className={`tab ${activeTab === 'filing' ? 'active' : ''}`} onClick={() => setActiveTab('filing')}>
           Filing Summary
+        </button>
+        <button className={`tab ${activeTab === 'compliance' ? 'active' : ''}`} onClick={() => setActiveTab('compliance')}>
+          Compliance Guide
         </button>
       </div>
 
@@ -359,6 +413,222 @@ export default function CanadianTax() {
               Use CRA My Business Account or NETFILE to submit your GST/HST return.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Compliance Guide Tab */}
+      {activeTab === 'compliance' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Section A — Tax Number Validator */}
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>A — GST/HST &amp; QST Number Validator</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* GST/HST */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, minWidth: 120 }}>GST/HST Number</span>
+                  {taxConfig.gstNumber
+                    ? validateGSTNumber(taxConfig.gstNumber)
+                      ? <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✓ Valid format</span>
+                      : <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✗ Format invalid</span>
+                    : <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', padding: '2px 10px', borderRadius: 20, fontSize: 12 }}>— Not entered</span>
+                  }
+                  {taxConfig.gstNumber && <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{taxConfig.gstNumber}</span>}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 130 }}>Format: 9 digits + RT + 4 digits (e.g. 123456789RT0001)</div>
+              </div>
+              {/* QST */}
+              {taxConfig.province === 'QC' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, minWidth: 120 }}>QST Number</span>
+                    {taxConfig.qstNumber
+                      ? validateQSTNumber(taxConfig.qstNumber)
+                        ? <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✓ Valid format</span>
+                        : <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✗ Format invalid</span>
+                      : <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', padding: '2px 10px', borderRadius: 20, fontSize: 12 }}>— Not entered</span>
+                    }
+                    {taxConfig.qstNumber && <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{taxConfig.qstNumber}</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 130 }}>Format: 10 digits + TQ + 4 digits (e.g. 1234567890TQ0001)</div>
+                </div>
+              )}
+              {/* PST */}
+              {['BC', 'MB', 'SK'].includes(taxConfig.province) && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, minWidth: 120 }}>PST Number</span>
+                    {taxConfig.pstNumber
+                      ? validatePSTNumber(taxConfig.pstNumber)
+                        ? <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✓ Valid format</span>
+                        : <span style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✗ Too short</span>
+                      : <span style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', padding: '2px 10px', borderRadius: 20, fontSize: 12 }}>— Not entered</span>
+                    }
+                    {taxConfig.pstNumber && <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{taxConfig.pstNumber}</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 130 }}>PST formats vary by province — at least 4 characters required</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section B — Filing Frequency Recommendation */}
+          <div className="card" style={{ padding: 20, border: '2px solid rgba(79,70,229,0.3)', background: 'rgba(79,70,229,0.05)' }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>B — Filing Frequency Recommendation</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 10 }}>
+              <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--primary-light)' }}>{filingFrequency}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Based on {new Date().getFullYear()} revenue of <strong>{sym}{annualRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong>
+              </div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{filingFrequencyNote}</div>
+          </div>
+
+          {/* Section C — Annual Remittance Calendar */}
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>C — Annual Remittance Calendar ({new Date().getFullYear()})</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    {['Period', 'Filing For', 'Due Date', 'Status'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {remittanceCalendar.map((row, i) => {
+                    const today = new Date();
+                    const daysUntil = Math.ceil((row.due - today) / (1000 * 60 * 60 * 24));
+                    const isPast = row.due < today;
+                    const isSoon = !isPast && daysUntil <= 14;
+                    const statusColor = isPast ? '#10B981' : isSoon ? '#F59E0B' : 'var(--text-muted)';
+                    const statusLabel = isPast ? '✓ Filed' : isSoon ? '⚠ Due Soon' : 'Upcoming';
+                    const statusBg = isPast ? 'rgba(16,185,129,0.1)' : isSoon ? 'rgba(245,158,11,0.12)' : 'var(--bg-tertiary)';
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px 10px', fontWeight: 600 }}>{row.label}</td>
+                        <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{row.period}</td>
+                        <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 12 }}>{row.due.toISOString().slice(0, 10)}</td>
+                        <td style={{ padding: '8px 10px' }}>
+                          <span style={{ background: statusBg, color: statusColor, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{statusLabel}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section D — CRA Invoice Requirements */}
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>D — CRA Tax Invoice Requirements</h3>
+            <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '7px 10px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, width: 200 }}>Transaction Amount</th>
+                    <th style={{ textAlign: 'left', padding: '7px 10px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>Required on Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { amount: 'Any amount', required: 'Date, supplier name, description of goods/services' },
+                    { amount: '$30 or more', required: 'Total amount paid, GST/HST paid OR statement that GST/HST is included, your GST/HST registration number' },
+                    { amount: '$150 or more', required: 'Customer name/business name, payment terms' },
+                  ].map(row => (
+                    <tr key={row.amount} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 700, color: 'var(--primary-light)' }}>{row.amount}</td>
+                      <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>+ {row.required}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ padding: '10px 14px', background: 'rgba(16,185,129,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)', border: '1px solid rgba(16,185,129,0.2)' }}>
+              Your receipts currently include: <strong>✓ Date</strong> &nbsp;·&nbsp; <strong>✓ Total</strong> &nbsp;·&nbsp; <strong>✓ GST/HST breakdown</strong> &nbsp;·&nbsp; <strong>{taxConfig.gstNumber ? '✓' : '—'} GST# {taxConfig.gstNumber ? `(${taxConfig.gstNumber})` : '(not set)'}</strong>
+            </div>
+          </div>
+
+          {/* Section E — Zero-Rated vs Exempt */}
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 4, fontSize: 15 }}>E — Zero-Rated vs Exempt Distinction</h3>
+            <p style={{ fontSize: 12, color: '#F59E0B', marginBottom: 14, fontWeight: 600 }}>Critical distinction — these are NOT the same. Confusing them affects your Input Tax Credit claims.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: 14, background: 'rgba(16,185,129,0.04)' }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: '#10B981', marginBottom: 10 }}>Zero-Rated (0%)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, marginBottom: 12 }}>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Tax charged:</span> <strong>0%</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>ITC claimable:</span> <strong style={{ color: '#10B981' }}>✅ YES — you CAN claim Input Tax Credits</strong></div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>Examples:</div>
+                  {['Basic groceries', 'Prescription drugs', 'Medical devices', 'Agricultural products', 'Exports', 'Fishing equipment & supplies'].map(e => (
+                    <div key={e} style={{ padding: '2px 0' }}>• {e}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: 14, background: 'rgba(239,68,68,0.03)' }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: '#EF4444', marginBottom: 10 }}>Exempt (No Tax)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, marginBottom: 12 }}>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Tax charged:</span> <strong>None</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>ITC claimable:</span> <strong style={{ color: '#EF4444' }}>❌ NO — you CANNOT claim ITC</strong></div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4, color: 'var(--text-primary)' }}>Examples:</div>
+                  {['Residential rent', 'Financial services (loans, deposits, life insurance)', 'Healthcare services (doctors, dentists)', 'Educational services (tuition)', 'Legal aid services'].map(e => (
+                    <div key={e} style={{ padding: '2px 0' }}>• {e}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section F — Provincial Remittance Authorities */}
+          <div className="card" style={{ padding: 20 }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>F — Provincial Remittance Authorities</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    {['Tax', 'Authority', 'Filing Method'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '7px 10px', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { tax: 'GST (federal)', authority: 'Canada Revenue Agency (CRA)', method: 'NETFILE, My Business Account', provinces: ['AB','BC','MB','NT','NU','ON','PE','SK','YT','NB','NL','NS'] },
+                    { tax: 'HST (harmonized)', authority: 'Canada Revenue Agency (CRA)', method: 'NETFILE, My Business Account', provinces: ['ON','NB','NL','NS','PE'] },
+                    { tax: 'QST (Quebec)', authority: 'Revenu Québec', method: 'clicSEQUR-entreprises', provinces: ['QC'] },
+                    { tax: 'PST (BC)', authority: 'BC Ministry of Finance', method: 'eTaxBC', provinces: ['BC'] },
+                    { tax: 'RST (Manitoba)', authority: 'Manitoba Tax Administration', method: 'TAXcess', provinces: ['MB'] },
+                    { tax: 'PST (Saskatchewan)', authority: 'Saskatchewan Finance', method: 'Saskatchewan eTax Services', provinces: ['SK'] },
+                  ].map(row => {
+                    const isActive = row.provinces.includes(taxConfig.province);
+                    return (
+                      <tr key={row.tax} style={{
+                        borderBottom: '1px solid var(--border)',
+                        background: isActive ? 'rgba(79,70,229,0.08)' : 'transparent',
+                      }}>
+                        <td style={{ padding: '8px 10px', fontWeight: isActive ? 800 : 600, color: isActive ? 'var(--primary-light)' : 'var(--text-primary)' }}>
+                          {isActive && <span style={{ marginRight: 6 }}>▶</span>}{row.tax}
+                        </td>
+                        <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{row.authority}</td>
+                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: 12 }}>{row.method}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+              ▶ Highlighted rows apply to your selected province: <strong>{taxConfig.province}</strong>
+            </div>
+          </div>
+
         </div>
       )}
     </div>

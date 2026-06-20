@@ -26,6 +26,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import CustomerManagement from './components/Customers/CustomerManagement';
 import Payroll from './components/Payroll/Payroll';
 import CRAAuditExport from './components/Regulatory/CRAAuditExport';
+import Accounting from './components/Accounting/Accounting';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -60,6 +61,7 @@ function AppLayout() {
             <Route path="/backorders" element={<Backorders />} />
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/cra-audit" element={<CRAAuditExport />} />
+            <Route path="/accounting" element={<Accounting />} />
           </Routes>
         </div>
       </div>
