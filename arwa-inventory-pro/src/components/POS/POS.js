@@ -29,7 +29,6 @@ export default function POS() {
   const [payments, setPayments] = useState([{ method: 'cash', amount: '' }]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
-  const [cashGiven] = useState(0);
   const [receipt, setReceipt] = useState(null);
   const [barcodeInput, setBarcodeInput] = useState('');
   const barcodeRef = useRef(null);
