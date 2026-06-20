@@ -26,14 +26,15 @@ const getCurrencySymbol = (code) => {
 };
 
 export default function POS() {
-  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders, calcOrderTax, addAuditEntry, taxConfig } = useApp();
+  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders, calcOrderTax, addAuditEntry, taxConfig, customers, updateCustomer } = useApp();
 
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'return'
   const [cart, setCart] = useState([]);
   const [search, setSearch] = useState('');
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [customerName, setCustomerName] = useState('');
+  const [payments, setPayments] = useState([{ method: 'cash', amount: '' }]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const [cashGiven, setCashGiven] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -88,7 +89,19 @@ export default function POS() {
   const subtotal = cart.reduce((s, i) => s + i.salePrice * i.qty, 0);
   const discountAmt = subtotal * (discount / 100);
   const taxAmt = cart.reduce((s, i) => s + i.salePrice * i.qty * (i.tax / 100), 0);
-  const total = subtotal - discountAmt + taxAmt;
+  const taxedTotal = subtotal - discountAmt + taxAmt;
+
+  // Loyalty points
+  const selectedCustomer = customers.find(c => String(c.id) === String(selectedCustomerId));
+  const availablePoints = selectedCustomer ? (selectedCustomer.loyaltyPoints || 0) : 0;
+  const pointsDiscount = pointsToRedeem / 100;
+  const total = Math.max(0, taxedTotal - pointsDiscount);
+
+  // Split payments
+  const totalPaid = payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const remaining = total - totalPaid;
+  const isPaymentComplete = remaining <= 0.01;
+
   const change = parseFloat(cashGiven) - total;
 
   const handleBarcodeScan = (e) => {
@@ -102,10 +115,15 @@ export default function POS() {
   const processPayment = () => {
     if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
 
-    if (paymentMethod === 'cash') {
-      const cashVal = parseFloat(cashGiven);
-      if (!cashGiven || isNaN(cashVal) || cashVal < total) {
-        showToast(`Please enter cash amount (minimum ${sym}${total.toFixed(2)})`, 'error');
+    if (!isPaymentComplete) {
+      showToast(`Payment incomplete — ${sym}${remaining.toFixed(2)} still remaining`, 'error');
+      return;
+    }
+
+    // Validate cash entries: if any payment entry is cash, check it has an amount
+    for (const pay of payments) {
+      if (!pay.amount || parseFloat(pay.amount) <= 0) {
+        showToast('Please enter an amount for each payment entry', 'error');
         return;
       }
     }
@@ -135,40 +153,58 @@ export default function POS() {
     const cartSubtotal = cart.reduce((s, i) => s + i.salePrice * i.qty, 0);
     const taxBreakdown = calcOrderTax(cartSubtotal);
 
+    const primaryMethod = payments[0]?.method || 'cash';
+    const changeAmt = Math.max(0, totalPaid - total);
+
     const receiptData = {
       id: orderId,
-      customer: customerName || 'Walk-in Customer',
+      customer: selectedCustomer?.name || 'Walk-in Customer',
       items: [...cart],
       subtotal,
       discountAmt,
       taxAmt,
       total,
-      payment: paymentMethod,
-      change: paymentMethod === 'cash' ? Math.max(0, change) : 0,
-      cashGiven: parseFloat(cashGiven) || total,
+      payment: primaryMethod,
+      payments: payments.filter(p => parseFloat(p.amount) > 0),
+      change: changeAmt,
+      cashGiven: totalPaid,
+      pointsDiscount,
+      pointsToRedeem,
       time: new Date().toLocaleString(),
     };
 
     const newOrder = {
       id: orderId,
-      customer: customerName || 'Walk-in Customer',
+      customer: selectedCustomer?.name || 'Walk-in Customer',
       items: cart.length,
       total: parseFloat(total.toFixed(2)),
       subtotal: parseFloat(cartSubtotal.toFixed(2)),
       taxBreakdown,
       status: 'completed',
       date: new Date().toISOString(),
-      payment: paymentMethod,
+      payment: primaryMethod,
+      payments: payments.filter(p => parseFloat(p.amount) > 0),
       cashier: currentUser?.name || 'Cashier',
       platform: 'pos',
+      loyaltyPointsEarned: Math.floor(total),
+      loyaltyPointsRedeemed: pointsToRedeem,
     };
     addOrder(newOrder);
     addAuditEntry('POS_SALE', { orderId: newOrder.id, total: newOrder.total, tax: taxBreakdown.total });
 
+    // Update customer loyalty points
+    if (selectedCustomer) {
+      const earned = Math.floor(total);
+      const newPoints = Math.max(0, (availablePoints - pointsToRedeem) + earned);
+      updateCustomer(selectedCustomer.id, { loyaltyPoints: newPoints });
+    }
+
     setReceipt(receiptData);
     setCart([]);
     setDiscount(0);
-    setCustomerName('');
+    setSelectedCustomerId('');
+    setPointsToRedeem(0);
+    setPayments([{ method: 'cash', amount: '' }]);
     setCashGiven('');
     showToast(`Payment processed! Order ${orderId}`, 'success');
   };
@@ -423,16 +459,47 @@ export default function POS() {
           {/* Cart Panel */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflow: 'hidden' }}>
             <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: 16 }}>
-              {/* Customer */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <User size={14} style={{ color: 'var(--text-muted)' }} />
-                <input
-                  className="form-control"
-                  style={{ fontSize: 12 }}
-                  placeholder="Customer name (optional)"
-                  value={customerName}
-                  onChange={e => setCustomerName(e.target.value)}
-                />
+              {/* Customer Selector */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <User size={14} style={{ color: 'var(--text-muted)' }} />
+                  <select
+                    className="form-control"
+                    style={{ fontSize: 12, flex: 1 }}
+                    value={selectedCustomerId}
+                    onChange={e => { setSelectedCustomerId(e.target.value); setPointsToRedeem(0); }}
+                  >
+                    <option value="">Walk-in Customer</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.loyaltyPoints || 0} pts)</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Loyalty Points Redemption */}
+                {selectedCustomer && availablePoints > 0 && (
+                  <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>Loyalty Points: {availablePoints} pts</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>100 pts = {sym}1.00 off</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        className="form-control"
+                        type="number"
+                        min="0"
+                        max={Math.min(availablePoints, Math.floor(taxedTotal * 100))}
+                        step="100"
+                        placeholder="Points to redeem"
+                        value={pointsToRedeem || ''}
+                        onChange={e => setPointsToRedeem(Math.min(parseInt(e.target.value) || 0, availablePoints))}
+                        style={{ flex: 1 }}
+                      />
+                      <span style={{ fontSize: 12, color: '#10B981', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        = {sym}{(pointsToRedeem / 100).toFixed(2)} off
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 6 }}>
@@ -536,6 +603,7 @@ export default function POS() {
                   { label: 'Subtotal', value: `${sym}${subtotal.toFixed(2)}` },
                   discount > 0 && { label: `Discount (${discount}%)`, value: `-${sym}${discountAmt.toFixed(2)}`, color: 'var(--success)' },
                   { label: 'Tax', value: `${sym}${taxAmt.toFixed(2)}` },
+                  pointsDiscount > 0 && { label: `Points Redemption (${pointsToRedeem} pts)`, value: `-${sym}${pointsDiscount.toFixed(2)}`, color: '#10B981' },
                 ].filter(Boolean).map((r, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                     <span style={{ color: r.color || 'var(--text-muted)' }}>{r.label}</span>

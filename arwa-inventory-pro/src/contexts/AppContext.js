@@ -64,6 +64,7 @@ export function AppProvider({ children }) {
   const [purchaseOrders, setPurchaseOrders] = useState(() => loadLS('arwa_purchaseOrders', []));
   const [stockTransfers, setStockTransfers] = useState(() => loadLS('arwa_stockTransfers', []));
   const [backorders, setBackorders] = useState(() => loadLS('arwa_backorders', []));
+  const [payrollRecords, setPayrollRecords] = useState(() => loadLS('arwa_payrollRecords', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
   const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
@@ -132,6 +133,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_backorders',     JSON.stringify(backorders)),     [backorders]);
   useEffect(() => localStorage.setItem('arwa_taxConfig',       JSON.stringify(taxConfig)),       [taxConfig]);
   useEffect(() => localStorage.setItem('arwa_costingMethod',   JSON.stringify(costingMethod)),   [costingMethod]);
+  useEffect(() => localStorage.setItem('arwa_payrollRecords', JSON.stringify(payrollRecords)), [payrollRecords]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -244,6 +246,8 @@ export function AppProvider({ children }) {
   }, [taxConfig]);
 
   // ─── stock movement audit ──────────────────────────────────────────────────
+
+  const addPayrollRecord = useCallback((r) => setPayrollRecords(prev => [r, ...prev]), []);
 
   const addStockMovement = useCallback(({ productId, productName, type, qty, note }) => {
     setStockMovements(prev => [{
@@ -504,6 +508,7 @@ export function AppProvider({ children }) {
     onboarded, businessName, completeOnboarding,
     taxConfig, setTaxConfig, calcOrderTax,
     costingMethod, setCostingMethod,
+    payrollRecords, addPayrollRecord,
     purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     stockTransfers, addStockTransfer,
     backorders, addBackorder, updateBackorder,
@@ -524,7 +529,7 @@ export function AppProvider({ children }) {
     subscription,
     apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
     taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
-    costingMethod,
+    costingMethod, payrollRecords, addPayrollRecord,
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,
