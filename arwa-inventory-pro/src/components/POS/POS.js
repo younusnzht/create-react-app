@@ -5,12 +5,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
-const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', icon: Banknote },
-  { id: 'card', label: 'Card', icon: CreditCard },
-  { id: 'mobile', label: 'Mobile Pay', icon: Smartphone },
-];
-
 const QUICK_DISCOUNTS = [5, 10, 15, 20];
 
 const getCurrencySymbol = (code) => {
@@ -102,7 +96,6 @@ export default function POS() {
   const remaining = total - totalPaid;
   const isPaymentComplete = remaining <= 0.01;
 
-  const change = parseFloat(cashGiven) - total;
 
   const handleBarcodeScan = (e) => {
     if (e.key === 'Enter' && barcodeInput) {
@@ -353,7 +346,29 @@ export default function POS() {
               <span style={{ fontWeight: 700 }}>TOTAL</span>
               <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--success)' }}>{sym}{receipt.total.toFixed(2)}</span>
             </div>
-            {receipt.payment === 'cash' && (
+            {receipt.pointsDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ color: '#10B981', fontSize: 12 }}>Points Redeemed ({receipt.pointsToRedeem} pts)</span>
+                <span style={{ fontSize: 12, color: '#10B981', fontWeight: 700 }}>-{sym}{receipt.pointsDiscount.toFixed(2)}</span>
+              </div>
+            )}
+            {receipt.payments && receipt.payments.length > 1 ? (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Split Payment:</div>
+                {receipt.payments.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 12, textTransform: 'capitalize' }}>{p.method}</span>
+                    <span style={{ fontSize: 12 }}>{sym}{parseFloat(p.amount).toFixed(2)}</span>
+                  </div>
+                ))}
+                {receipt.change > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Change</span>
+                    <span style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 700 }}>{sym}{receipt.change.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            ) : receipt.payment === 'cash' ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Cash Given</span>
@@ -364,7 +379,7 @@ export default function POS() {
                   <span style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 700 }}>{sym}{receipt.change.toFixed(2)}</span>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn btn-secondary w-full" onClick={() => setReceipt(null)}>
@@ -632,45 +647,72 @@ export default function POS() {
 
             {/* Payment */}
             <div className="card" style={{ padding: 16 }}>
-              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 10 }}>Payment Method</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
-                {PAYMENT_METHODS.map(m => {
-                  const Icon = m.icon;
-                  return (
-                    <button
-                      key={m.id}
-                      className={`btn btn-sm ${paymentMethod === m.id ? 'btn-primary' : 'btn-secondary'}`}
-                      style={{ flexDirection: 'column', gap: 4, height: 52, justifyContent: 'center' }}
-                      onClick={() => setPaymentMethod(m.id)}
-                    >
-                      <Icon size={16} />
-                      <span style={{ fontSize: 11 }}>{m.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {paymentMethod === 'cash' && (
-                <div style={{ marginBottom: 10 }}>
-                  <input
-                    className="form-control"
-                    type="number"
-                    step="0.01"
-                    placeholder={`Cash given by customer (min ${sym}${total.toFixed(2)})`}
-                    value={cashGiven}
-                    onChange={e => setCashGiven(e.target.value)}
-                  />
-                  {cashGiven && parseFloat(cashGiven) >= total && (
-                    <div style={{ fontSize: 12, color: 'var(--warning)', fontWeight: 700, marginTop: 6, textAlign: 'center' }}>
-                      Change: {sym}{Math.max(0, change).toFixed(2)}
-                    </div>
-                  )}
+              {/* Split Payment UI */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', margin: 0 }}>Payment</p>
+                  <button
+                    style={{ fontSize: 11, color: 'var(--primary-light)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}
+                    onClick={() => setPayments(p => [...p, { method: 'cash', amount: '' }])}
+                  >+ Split</button>
                 </div>
-              )}
+                {payments.map((pay, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                    <select
+                      className="form-control"
+                      style={{ flex: 1, fontSize: 12 }}
+                      value={pay.method}
+                      onChange={e => setPayments(p => p.map((x, j) => j === i ? { ...x, method: e.target.value } : x))}
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="mobile">Mobile Pay</option>
+                      <option value="credit">Store Credit</option>
+                    </select>
+                    <input
+                      className="form-control"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Amount"
+                      style={{ width: 90, fontSize: 12 }}
+                      value={pay.amount}
+                      onChange={e => setPayments(p => p.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))}
+                    />
+                    {payments.length > 1 && (
+                      <button
+                        onClick={() => setPayments(p => p.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 4px', fontSize: 16, lineHeight: 1 }}
+                      >×</button>
+                    )}
+                  </div>
+                ))}
+                {/* Remaining / change indicator */}
+                {cart.length > 0 && (() => {
+                  if (remaining > 0.01) {
+                    return (
+                      <div style={{ fontSize: 12, color: '#F59E0B', fontWeight: 700, textAlign: 'right' }}>
+                        Remaining: {sym}{remaining.toFixed(2)}
+                      </div>
+                    );
+                  } else if (remaining < -0.01) {
+                    return (
+                      <div style={{ fontSize: 12, color: '#10B981', fontWeight: 700, textAlign: 'right' }}>
+                        Change due: {sym}{Math.abs(remaining).toFixed(2)}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div style={{ fontSize: 12, color: '#10B981', fontWeight: 700, textAlign: 'right' }}>✓ Payment complete</div>
+                    );
+                  }
+                })()}
+              </div>
               <button
                 className="btn btn-primary w-full btn-lg"
                 style={{ justifyContent: 'center', fontWeight: 800 }}
                 onClick={processPayment}
-                disabled={cart.length === 0}
+                disabled={cart.length === 0 || !isPaymentComplete}
               >
                 <CheckCircle size={16} /> Process Payment
               </button>

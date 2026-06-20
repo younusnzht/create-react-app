@@ -24,6 +24,8 @@ import StockTransfer from './components/Inventory/StockTransfer';
 import Backorders from './components/Inventory/Backorders';
 import ErrorBoundary from './components/ErrorBoundary';
 import CustomerManagement from './components/Customers/CustomerManagement';
+import Payroll from './components/Payroll/Payroll';
+import CRAAuditExport from './components/Regulatory/CRAAuditExport';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -56,6 +58,8 @@ function AppLayout() {
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/stock-transfers" element={<StockTransfer />} />
             <Route path="/backorders" element={<Backorders />} />
+            <Route path="/payroll" element={<Payroll />} />
+            <Route path="/cra-audit" element={<CRAAuditExport />} />
           </Routes>
         </div>
       </div>

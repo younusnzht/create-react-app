@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -23,6 +23,8 @@ const NAV_ITEMS = [
   { path: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
   { path: '/stock-transfers', label: 'Stock Transfers', icon: ArrowRight },
   { path: '/backorders',      label: 'Backorders',      icon: AlertTriangle },
+  { path: '/payroll',         label: 'Payroll / T4',    icon: DollarSign },
+  { path: '/cra-audit',       label: 'CRA Audit Export', icon: Shield },
   { section: 'AI & Platform' },
   { path: '/ai-guardian', label: 'AI Guardian', icon: Bot, badge: 'AI', aiFeature: true },
   { path: '/subscription', label: 'Subscription', icon: CreditCard },
