@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { path: '/customers', label: 'Customers', icon: Users2 },
   { path: '/users', label: 'User Management', icon: Users },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
+  { path: '/tax', label: 'Canadian Tax', icon: Receipt },
   { section: 'AI & Platform' },
   { path: '/ai-guardian', label: 'AI Guardian', icon: Bot, badge: 'AI', aiFeature: true },
   { path: '/subscription', label: 'Subscription', icon: CreditCard },

@@ -26,7 +26,7 @@ const getCurrencySymbol = (code) => {
 };
 
 export default function POS() {
-  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders } = useApp();
+  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders, calcOrderTax, addAuditEntry, taxConfig } = useApp();
 
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'return'
   const [cart, setCart] = useState([]);
@@ -132,6 +132,9 @@ export default function POS() {
 
     const orderId = `POS-${Date.now()}`;
 
+    const cartSubtotal = cart.reduce((s, i) => s + i.salePrice * i.qty, 0);
+    const taxBreakdown = calcOrderTax(cartSubtotal);
+
     const receiptData = {
       id: orderId,
       customer: customerName || 'Walk-in Customer',
@@ -146,17 +149,21 @@ export default function POS() {
       time: new Date().toLocaleString(),
     };
 
-    addOrder({
+    const newOrder = {
       id: orderId,
       customer: customerName || 'Walk-in Customer',
       items: cart.length,
       total: parseFloat(total.toFixed(2)),
+      subtotal: parseFloat(cartSubtotal.toFixed(2)),
+      taxBreakdown,
       status: 'completed',
       date: new Date().toISOString(),
       payment: paymentMethod,
       cashier: currentUser?.name || 'Cashier',
       platform: 'pos',
-    });
+    };
+    addOrder(newOrder);
+    addAuditEntry('POS_SALE', { orderId: newOrder.id, total: newOrder.total, tax: taxBreakdown.total });
 
     setReceipt(receiptData);
     setCart([]);
@@ -535,6 +542,18 @@ export default function POS() {
                     <span style={{ color: r.color || 'var(--text-primary)', fontWeight: 600 }}>{r.value}</span>
                   </div>
                 ))}
+                {taxConfig && taxConfig.province && (() => {
+                  const cartSubtotalDisplay = cart.reduce((s, i) => s + i.salePrice * i.qty, 0);
+                  const tax = calcOrderTax(cartSubtotalDisplay);
+                  return tax.total > 0 ? (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                      {tax.GST > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST ({tax.province.GST}%)</span><span>{sym}{tax.GST.toFixed(2)}</span></div>}
+                      {tax.HST > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>HST ({tax.province.HST}%)</span><span>{sym}{tax.HST.toFixed(2)}</span></div>}
+                      {tax.PST > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>PST ({tax.province.PST}%)</span><span>{sym}{tax.PST.toFixed(2)}</span></div>}
+                      {tax.QST > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>QST ({tax.province.QST.toFixed(3)}%)</span><span>{sym}{tax.QST.toFixed(2)}</span></div>}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="divider" style={{ margin: '8px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 800, fontSize: 14 }}>TOTAL</span>

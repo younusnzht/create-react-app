@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -42,13 +42,14 @@ const handleExportCSV = (data, filename) => {
 };
 
 export default function Reports() {
-  const { products, orders, currency, showToast } = useApp();
+  const { products, orders, currency, showToast, auditLog } = useApp();
   const [period, setPeriod] = useState('yearly');
   const [activeReport, setActiveReport] = useState('sales');
 
   const currencySymbol = getCurrencySymbol(currency);
 
   const totalRevenue = SALES_DATA.reduce((s, m) => s + m.revenue, 0);
+  const totalRevenueFromOrders = useMemo(() => orders.reduce((s, o) => s + (o.total || 0), 0), [orders]);
   const totalProfit = SALES_DATA.reduce((s, m) => s + m.profit, 0);
   const totalOrders = SALES_DATA.reduce((s, m) => s + m.orders, 0);
   const profitMargin = ((totalProfit / totalRevenue) * 100).toFixed(1);
@@ -105,6 +106,37 @@ export default function Reports() {
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary btn-sm" onClick={handlePrintPDF}><Download size={13} /> Export PDF</button>
           <button className="btn btn-secondary btn-sm" onClick={() => handleExportCSV(getExportData(), `${activeReport}-report`)}><Download size={13} /> Export CSV</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            // QuickBooks IIF format
+            const lines = [
+              '!TRNS\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO',
+              '!SPL\tTRNSTYPE\tDATE\tACCNT\tAMOUNT\tMEMO',
+              '!ENDTRNS',
+              ...(orders||[]).flatMap(o => [
+                `TRNS\tINVOICE\t${o.date}\tAccounts Receivable\t${o.customer||'Walk-in'}\t${(o.total||0).toFixed(2)}\t${o.id}\tSale`,
+                `SPL\tINVOICE\t${o.date}\tSales\t-${(o.total||0).toFixed(2)}\tSale`,
+                'ENDTRNS',
+              ]),
+            ];
+            const blob = new Blob([lines.join('\n')],{type:'text/plain'});
+            const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='arwa-quickbooks.iif';a.click();URL.revokeObjectURL(url);
+          }}>
+            QuickBooks Export
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            // Xero CSV format
+            const rows = [
+              ['*ContactName','*InvoiceNumber','*InvoiceDate','*DueDate','Description','*Quantity','*UnitAmount','*AccountCode','*TaxType'],
+              ...(orders||[]).map(o => [
+                o.customer||'Walk-in', `INV-${o.id}`, o.date, o.date,
+                'Sales', '1', (o.total||0).toFixed(2), '200', 'Tax Exclusive',
+              ]),
+            ];
+            const csv = rows.map(r=>r.join(',')).join('\n');
+            const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='arwa-xero.csv';a.click();URL.revokeObjectURL(url);
+          }}>
+            Xero Export
+          </button>
         </div>
       </div>
 
@@ -136,6 +168,9 @@ export default function Reports() {
             {r.charAt(0).toUpperCase() + r.slice(1)} Report
           </button>
         ))}
+        <button className={`tab ${activeReport === 'audit' ? 'active' : ''}`} onClick={() => setActiveReport('audit')}>
+          Audit Trail
+        </button>
       </div>
 
       {/* Period selector */}
@@ -151,6 +186,31 @@ export default function Reports() {
 
       {activeReport === 'sales' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* COGS & Profit */}
+          <div className="card" style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span className="card-title">Cost of Goods Sold (COGS)</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Based on recorded sales</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {[
+                { label: 'Total Revenue',  value: totalRevenueFromOrders,              color: '#4F46E5' },
+                { label: 'Est. COGS',      value: totalRevenueFromOrders * 0.6,        color: '#EF4444' },
+                { label: 'Gross Profit',   value: totalRevenueFromOrders * 0.4,        color: '#10B981' },
+                { label: 'Gross Margin',   value: null, pct: 40,                       color: '#F59E0B' },
+              ].map(s => (
+                <div key={s.label} style={{ padding: 14, borderRadius: 10, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>
+                    {s.pct !== undefined ? `${s.pct}%` : `$${(s.value||0).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2})}`}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', fontSize: 12, color: '#D97706' }}>
+              💡 COGS is estimated at 60% of revenue. Add purchase prices to your products for exact COGS calculation.
+            </div>
+          </div>
           <div className="card">
             <div className="card-header"><span className="card-title">Revenue vs Profit Trend</span></div>
             <ResponsiveContainer width="100%" height={280}>
@@ -329,6 +389,59 @@ export default function Reports() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {activeReport === 'audit' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>System Audit Trail</div>
+            <button className="btn btn-secondary btn-sm" onClick={() => {
+              const rows = [['Timestamp','User','Action','Details'], ...(auditLog||[]).map(e => [e.timestamp, e.user||'System', e.action, JSON.stringify(e)])];
+              const csv = rows.map(r=>r.join(',')).join('\n');
+              const blob = new Blob([csv],{type:'text/csv'});
+              const url=URL.createObjectURL(blob);
+              const a=document.createElement('a');a.href=url;a.download='audit-log.csv';a.click();URL.revokeObjectURL(url);
+            }}>
+              Export Audit CSV
+            </button>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {(!auditLog || auditLog.length === 0) ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No audit entries yet. Actions will be logged here automatically.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-tertiary)', borderBottom: '1px solid var(--border)' }}>
+                      {['Timestamp','User','Action','Details'].map(h=>(
+                        <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:10, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.05em' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(auditLog||[]).slice(0,100).map((e,i)=>(
+                      <tr key={e.id||i} style={{ borderBottom:'1px solid var(--border)' }}
+                        onMouseEnter={ev=>ev.currentTarget.style.background='var(--bg-tertiary)'}
+                        onMouseLeave={ev=>ev.currentTarget.style.background='transparent'}>
+                        <td style={{ padding:'8px 14px', color:'var(--text-muted)', whiteSpace:'nowrap' }}>{new Date(e.timestamp).toLocaleString()}</td>
+                        <td style={{ padding:'8px 14px', fontWeight:600 }}>{e.user||'System'}</td>
+                        <td style={{ padding:'8px 14px' }}>
+                          <span style={{ padding:'2px 8px', borderRadius:12, fontSize:10, fontWeight:700,
+                            background: e.action?.includes('SALE') ? 'rgba(16,185,129,0.12)' : e.action?.includes('DELETE') ? 'rgba(239,68,68,0.12)' : 'rgba(79,70,229,0.12)',
+                            color: e.action?.includes('SALE') ? '#10B981' : e.action?.includes('DELETE') ? '#EF4444' : '#4F46E5'
+                          }}>{e.action}</span>
+                        </td>
+                        <td style={{ padding:'8px 14px', color:'var(--text-muted)', maxWidth:300, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {Object.entries(e).filter(([k])=>!['id','timestamp','user','action'].includes(k)).map(([k,v])=>`${k}: ${v}`).join(' · ')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

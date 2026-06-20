@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS } from '../data/mockData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
+import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
 
 function loadLS(key, fallback) {
@@ -94,6 +95,14 @@ export function AppProvider({ children }) {
     trialDaysLeft: 0,
   }));
 
+  // ─── Canadian tax config ──────────────────────────────────────────────────
+  const [taxConfig, setTaxConfigState] = useState(() => loadLS('arwa_taxConfig', {
+    province: 'ON', gstNumber: '', qstNumber: '', pstNumber: '',
+  }));
+
+  // ─── Audit log ────────────────────────────────────────────────────────────
+  const [auditLog, setAuditLog] = useState(() => loadLS('arwa_auditLog', []));
+
   // ─── onboarding ───────────────────────────────────────────────────────────
   const [onboarded, setOnboarded] = useState(() => loadLS('arwa_onboarded', false));
   const [businessName, setBusinessName] = useState(() => loadLS('arwa_businessName', 'Arwa Enterprises'));
@@ -112,6 +121,8 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_notifications', JSON.stringify(notifications)), [notifications]);
   useEffect(() => localStorage.setItem('arwa_subscription',  JSON.stringify(subscription)),  [subscription]);
   useEffect(() => localStorage.setItem('arwa_scanStats',     JSON.stringify(scanStats)),     [scanStats]);
+  useEffect(() => localStorage.setItem('arwa_taxConfig', JSON.stringify(taxConfig)), [taxConfig]);
+  useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
 
@@ -195,6 +206,24 @@ export function AppProvider({ children }) {
     if (name && name.trim()) setBusinessName(name.trim());
     setOnboarded(true);
   }, []);
+
+  const setTaxConfig = useCallback((updater) => {
+    setTaxConfigState(prev => typeof updater === 'function' ? updater(prev) : { ...prev, ...updater });
+  }, []);
+
+  const addAuditEntry = useCallback((action, details = {}) => {
+    setAuditLog(prev => [{
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      user: 'Admin',
+      action,
+      ...details,
+    }, ...prev].slice(0, 500));
+  }, []);
+
+  const calcOrderTax = useCallback((subtotal, category = '', gstExempt = false) => {
+    return calcTax(subtotal, taxConfig?.province || 'ON', category, gstExempt);
+  }, [taxConfig]);
 
   // ─── stock movement audit ──────────────────────────────────────────────────
 
@@ -455,6 +484,8 @@ export function AppProvider({ children }) {
     scanStats,
     wsStatus, wsClient,
     onboarded, businessName, completeOnboarding,
+    taxConfig, setTaxConfig, calcOrderTax,
+    auditLog, addAuditEntry,
   }), [
     theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -469,7 +500,9 @@ export function AppProvider({ children }) {
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
     subscription,
-    apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName, completeOnboarding,
+    apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
+    taxConfig, auditLog,
+    completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

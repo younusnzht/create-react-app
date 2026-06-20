@@ -17,6 +17,7 @@ import Settings from './components/Settings/Settings';
 import OnlineOrders from './components/OnlineOrders/OnlineOrders';
 import Login from './components/Auth/Login';
 import OnboardingWizard from './components/Onboarding/OnboardingWizard';
+import CanadianTax from './components/Tax/CanadianTax';
 import ErrorBoundary from './components/ErrorBoundary';
 import CustomerManagement from './components/Customers/CustomerManagement';
 
@@ -46,6 +47,7 @@ function AppLayout() {
             <Route path="/online-orders" element={<OnlineOrders />} />
             <Route path="/customers" element={<CustomerManagement />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/tax" element={<CanadianTax />} />
           </Routes>
         </div>
       </div>
