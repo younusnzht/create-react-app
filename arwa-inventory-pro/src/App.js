@@ -18,6 +18,10 @@ import OnlineOrders from './components/OnlineOrders/OnlineOrders';
 import Login from './components/Auth/Login';
 import OnboardingWizard from './components/Onboarding/OnboardingWizard';
 import CanadianTax from './components/Tax/CanadianTax';
+import LotTracker from './components/Inventory/LotTracker';
+import PurchaseOrders from './components/Purchasing/PurchaseOrders';
+import StockTransfer from './components/Inventory/StockTransfer';
+import Backorders from './components/Inventory/Backorders';
 import ErrorBoundary from './components/ErrorBoundary';
 import CustomerManagement from './components/Customers/CustomerManagement';
 
@@ -48,6 +52,10 @@ function AppLayout() {
             <Route path="/customers" element={<CustomerManagement />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/tax" element={<CanadianTax />} />
+            <Route path="/lot-tracking" element={<LotTracker />} />
+            <Route path="/purchase-orders" element={<PurchaseOrders />} />
+            <Route path="/stock-transfers" element={<StockTransfer />} />
+            <Route path="/backorders" element={<Backorders />} />
           </Routes>
         </div>
       </div>

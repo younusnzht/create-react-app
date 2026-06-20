@@ -61,6 +61,9 @@ export function AppProvider({ children }) {
   const [onlineOrders, setOnlineOrders] = useState(() => loadLS('arwa_onlineOrders', ONLINE_ORDERS));
   const [suppliers, setSuppliers] = useState(() => loadLS('arwa_suppliers', SUPPLIERS));
   const [customers, setCustomers] = useState(() => loadLS('arwa_customers', CUSTOMERS));
+  const [purchaseOrders, setPurchaseOrders] = useState(() => loadLS('arwa_purchaseOrders', []));
+  const [stockTransfers, setStockTransfers] = useState(() => loadLS('arwa_stockTransfers', []));
+  const [backorders, setBackorders] = useState(() => loadLS('arwa_backorders', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
   const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
@@ -121,6 +124,9 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_notifications', JSON.stringify(notifications)), [notifications]);
   useEffect(() => localStorage.setItem('arwa_subscription',  JSON.stringify(subscription)),  [subscription]);
   useEffect(() => localStorage.setItem('arwa_scanStats',     JSON.stringify(scanStats)),     [scanStats]);
+  useEffect(() => localStorage.setItem('arwa_purchaseOrders', JSON.stringify(purchaseOrders)), [purchaseOrders]);
+  useEffect(() => localStorage.setItem('arwa_stockTransfers', JSON.stringify(stockTransfers)), [stockTransfers]);
+  useEffect(() => localStorage.setItem('arwa_backorders',     JSON.stringify(backorders)),     [backorders]);
   useEffect(() => localStorage.setItem('arwa_taxConfig', JSON.stringify(taxConfig)), [taxConfig]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
@@ -220,6 +226,14 @@ export function AppProvider({ children }) {
       ...details,
     }, ...prev].slice(0, 500));
   }, []);
+
+  const addStockTransfer    = useCallback((t) => setStockTransfers(prev => [t, ...prev]), []);
+  const addBackorder        = useCallback((b) => setBackorders(prev => [b, ...prev]), []);
+  const updateBackorder     = useCallback((id, data) => setBackorders(prev => prev.map(b => b.id === id ? { ...b, ...data } : b)), []);
+
+  const addPurchaseOrder    = useCallback((po) => setPurchaseOrders(prev => [po, ...prev]), []);
+  const updatePurchaseOrder = useCallback((id, data) => setPurchaseOrders(prev => prev.map(po => po.id === id ? { ...po, ...data } : po)), []);
+  const deletePurchaseOrder = useCallback((id) => setPurchaseOrders(prev => prev.filter(po => po.id !== id)), []);
 
   const calcOrderTax = useCallback((subtotal, category = '', gstExempt = false) => {
     return calcTax(subtotal, taxConfig?.province || 'ON', category, gstExempt);
@@ -485,6 +499,9 @@ export function AppProvider({ children }) {
     wsStatus, wsClient,
     onboarded, businessName, completeOnboarding,
     taxConfig, setTaxConfig, calcOrderTax,
+    purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
+    stockTransfers, addStockTransfer,
+    backorders, addBackorder, updateBackorder,
     auditLog, addAuditEntry,
   }), [
     theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
@@ -501,8 +518,10 @@ export function AppProvider({ children }) {
     stockMovements, addStockMovement,
     subscription,
     apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
-    taxConfig, auditLog,
+    taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
+    addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
+    addStockTransfer, addBackorder, updateBackorder,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
