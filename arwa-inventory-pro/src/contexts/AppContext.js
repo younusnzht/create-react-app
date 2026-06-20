@@ -103,6 +103,9 @@ export function AppProvider({ children }) {
     province: 'ON', gstNumber: '', qstNumber: '', pstNumber: '',
   }));
 
+  // ─── Inventory costing method ─────────────────────────────────────────────
+  const [costingMethod, setCostingMethod] = useState(() => loadLS('arwa_costingMethod', 'average'));
+
   // ─── Audit log ────────────────────────────────────────────────────────────
   const [auditLog, setAuditLog] = useState(() => loadLS('arwa_auditLog', []));
 
@@ -127,7 +130,8 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_purchaseOrders', JSON.stringify(purchaseOrders)), [purchaseOrders]);
   useEffect(() => localStorage.setItem('arwa_stockTransfers', JSON.stringify(stockTransfers)), [stockTransfers]);
   useEffect(() => localStorage.setItem('arwa_backorders',     JSON.stringify(backorders)),     [backorders]);
-  useEffect(() => localStorage.setItem('arwa_taxConfig', JSON.stringify(taxConfig)), [taxConfig]);
+  useEffect(() => localStorage.setItem('arwa_taxConfig',       JSON.stringify(taxConfig)),       [taxConfig]);
+  useEffect(() => localStorage.setItem('arwa_costingMethod',   JSON.stringify(costingMethod)),   [costingMethod]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -499,6 +503,7 @@ export function AppProvider({ children }) {
     wsStatus, wsClient,
     onboarded, businessName, completeOnboarding,
     taxConfig, setTaxConfig, calcOrderTax,
+    costingMethod, setCostingMethod,
     purchaseOrders, addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     stockTransfers, addStockTransfer,
     backorders, addBackorder, updateBackorder,
@@ -519,6 +524,7 @@ export function AppProvider({ children }) {
     subscription,
     apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
     taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
+    costingMethod,
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,

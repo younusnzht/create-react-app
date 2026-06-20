@@ -6,6 +6,7 @@ import {
 import { Download, TrendingUp, DollarSign, ShoppingCart, Package } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { SALES_DATA, WEEKLY_SALES } from '../../data/mockData';
+import { calcRealCOGS, classifyABC, findDeadStock, calcReorderAnalysis } from '../../services/costingEngine';
 
 const COLORS = ['#4F46E5', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0284C7', '#06B6D4', '#8B5CF6'];
 
@@ -42,14 +43,18 @@ const handleExportCSV = (data, filename) => {
 };
 
 export default function Reports() {
-  const { products, orders, currency, showToast, auditLog } = useApp();
+  const { products, orders, currency, showToast, auditLog, stockMovements } = useApp();
   const [period, setPeriod] = useState('yearly');
   const [activeReport, setActiveReport] = useState('sales');
 
   const currencySymbol = getCurrencySymbol(currency);
+  const sym = currencySymbol;
 
   const totalRevenue = SALES_DATA.reduce((s, m) => s + m.revenue, 0);
   const totalRevenueFromOrders = useMemo(() => orders.reduce((s, o) => s + (o.total || 0), 0), [orders]);
+  const realCOGS = calcRealCOGS(orders, products);
+  const grossProfit = totalRevenueFromOrders - realCOGS;
+  const grossMargin = totalRevenueFromOrders > 0 ? (grossProfit / totalRevenueFromOrders * 100) : 0;
   const totalProfit = SALES_DATA.reduce((s, m) => s + m.profit, 0);
   const totalOrders = SALES_DATA.reduce((s, m) => s + m.orders, 0);
   const profitMargin = ((totalProfit / totalRevenue) * 100).toFixed(1);
@@ -171,6 +176,7 @@ export default function Reports() {
         <button className={`tab ${activeReport === 'audit' ? 'active' : ''}`} onClick={() => setActiveReport('audit')}>
           Audit Trail
         </button>
+        <button className={`tab ${activeReport==='advanced'?'active':''}`} onClick={()=>setActiveReport('advanced')}>Advanced Analytics</button>
       </div>
 
       {/* Period selector */}
@@ -195,20 +201,20 @@ export default function Reports() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {[
                 { label: 'Total Revenue',  value: totalRevenueFromOrders,              color: '#4F46E5' },
-                { label: 'Est. COGS',      value: totalRevenueFromOrders * 0.6,        color: '#EF4444' },
-                { label: 'Gross Profit',   value: totalRevenueFromOrders * 0.4,        color: '#10B981' },
-                { label: 'Gross Margin',   value: null, pct: 40,                       color: '#F59E0B' },
+                { label: 'Real COGS',      value: realCOGS,                            color: '#EF4444' },
+                { label: 'Gross Profit',   value: grossProfit,                         color: '#10B981' },
+                { label: 'Gross Margin',   value: null, pct: grossMargin.toFixed(1),   color: '#F59E0B' },
               ].map(s => (
                 <div key={s.label} style={{ padding: 14, borderRadius: 10, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', textAlign: 'center' }}>
                   <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>
-                    {s.pct !== undefined ? `${s.pct}%` : `$${(s.value||0).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2})}`}
+                    {s.pct !== undefined ? `${s.pct}%` : `${currencySymbol}${(s.value||0).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2})}`}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', fontSize: 12, color: '#D97706' }}>
-              💡 COGS is estimated at 60% of revenue. Add purchase prices to your products for exact COGS calculation.
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', fontSize: 12, color: '#059669' }}>
+              ✓ COGS is calculated from actual product purchase prices. Products without purchase prices fall back to 60% of sale price.
             </div>
           </div>
           <div className="card">
@@ -389,6 +395,152 @@ export default function Reports() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {activeReport === 'advanced' && (
+        <div>
+          {/* ABC Analysis */}
+          <div style={{ marginBottom: 28 }}>
+            <h3 style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>ABC Inventory Analysis</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              A = top 80% of revenue (high priority) · B = next 15% · C = bottom 5% (low priority)
+            </p>
+            {(() => {
+              const abc = classifyABC(products, orders);
+              const counts = { A: abc.filter(p=>p.abcClass==='A').length, B: abc.filter(p=>p.abcClass==='B').length, C: abc.filter(p=>p.abcClass==='C').length };
+              return (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
+                    {[['A','#10B981','rgba(16,185,129,0.12)'],['B','#F59E0B','rgba(245,158,11,0.12)'],['C','#6B7280','rgba(107,114,128,0.12)']].map(([cls,color,bg])=>(
+                      <div key={cls} style={{ padding:14, borderRadius:10, background:bg, textAlign:'center' }}>
+                        <div style={{ fontSize:22,fontWeight:900,color }}>{counts[cls]} SKUs</div>
+                        <div style={{ fontSize:11,color,fontWeight:700 }}>Class {cls}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ overflowX:'auto' }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                      <thead>
+                        <tr style={{ borderBottom:'1px solid var(--border)' }}>
+                          {['Class','Product','Category','Stock','Revenue','% of Total'].map(h=>(
+                            <th key={h} style={{ padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {abc.slice(0,20).map(p=>{
+                          const clsColor = p.abcClass==='A'?'#10B981':p.abcClass==='B'?'#F59E0B':'#6B7280';
+                          const clsBg   = p.abcClass==='A'?'rgba(16,185,129,0.12)':p.abcClass==='B'?'rgba(245,158,11,0.12)':'rgba(107,114,128,0.12)';
+                          return (
+                            <tr key={p.id} style={{ borderBottom:'1px solid var(--border)' }}>
+                              <td style={{ padding:'7px 10px' }}>
+                                <span style={{ padding:'2px 8px',borderRadius:12,fontSize:11,fontWeight:700,background:clsBg,color:clsColor }}>{p.abcClass}</span>
+                              </td>
+                              <td style={{ padding:'7px 10px',fontWeight:600 }}>{p.name}</td>
+                              <td style={{ padding:'7px 10px',color:'var(--text-muted)' }}>{p.category||'—'}</td>
+                              <td style={{ padding:'7px 10px' }}>{p.stock||0}</td>
+                              <td style={{ padding:'7px 10px',fontWeight:700 }}>{sym}{p.revenue.toFixed(2)}</td>
+                              <td style={{ padding:'7px 10px' }}>{(p.revenuePct*100).toFixed(1)}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Dead Stock */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8 }}>
+              <div>
+                <h3 style={{ fontWeight:800,fontSize:15,marginBottom:4 }}>Dead Stock Report</h3>
+                <p style={{ fontSize:12,color:'var(--text-muted)' }}>Products with stock on hand but no movement in 60+ days</p>
+              </div>
+            </div>
+            {(() => {
+              const dead = findDeadStock(products, stockMovements, 60);
+              if (dead.length === 0) return <div style={{ padding:'20px',textAlign:'center',color:'var(--text-muted)',fontSize:13 }}>No dead stock detected — all products have recent movement.</div>;
+              const deadValue = dead.reduce((s,p) => s + (p.stock||0)*(p.purchasePrice||p.price*0.6||0), 0);
+              return (
+                <div>
+                  <div style={{ padding:'10px 14px',marginBottom:12,borderRadius:8,background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',fontSize:13,fontWeight:600,color:'#EF4444' }}>
+                    {dead.length} products · ${deadValue.toFixed(2)} tied up in dead stock
+                  </div>
+                  <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12 }}>
+                    <thead>
+                      <tr style={{ borderBottom:'1px solid var(--border)' }}>
+                        {['Product','Category','Stock','Value','Days Since Movement','Last Moved'].map(h=>(
+                          <th key={h} style={{ padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dead.map(p=>(
+                        <tr key={p.id} style={{ borderBottom:'1px solid var(--border)' }}>
+                          <td style={{ padding:'7px 10px',fontWeight:600 }}>{p.name}</td>
+                          <td style={{ padding:'7px 10px',color:'var(--text-muted)' }}>{p.category||'—'}</td>
+                          <td style={{ padding:'7px 10px' }}>{p.stock}</td>
+                          <td style={{ padding:'7px 10px',fontWeight:700 }}>{sym}{((p.stock||0)*(p.purchasePrice||p.price*0.6||0)).toFixed(2)}</td>
+                          <td style={{ padding:'7px 10px' }}>
+                            <span style={{ padding:'2px 8px',borderRadius:12,fontSize:11,fontWeight:700,background:'rgba(239,68,68,0.12)',color:'#EF4444' }}>{p.daysSinceMove === 999 ? 'Never' : `${p.daysSinceMove}d`}</span>
+                          </td>
+                          <td style={{ padding:'7px 10px',color:'var(--text-muted)' }}>{p.lastMoveDate ? p.lastMoveDate.toISOString().slice(0,10) : 'Never'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Reorder Analysis */}
+          <div>
+            <h3 style={{ fontWeight:800,fontSize:15,marginBottom:4 }}>Reorder Point Analysis</h3>
+            <p style={{ fontSize:12,color:'var(--text-muted)',marginBottom:14 }}>Products at or near minimum stock level — sorted by urgency</p>
+            {(() => {
+              const reorder = calcReorderAnalysis(products, orders, 30);
+              if (reorder.length === 0) return <div style={{ padding:'20px',textAlign:'center',color:'var(--text-muted)',fontSize:13 }}>All products are above reorder points.</div>;
+              return (
+                <table style={{ width:'100%',borderCollapse:'collapse',fontSize:12 }}>
+                  <thead>
+                    <tr style={{ borderBottom:'1px solid var(--border)' }}>
+                      {['Product','Stock','Min Stock','Sold/30d','Days Until Stockout','Suggested Reorder'].map(h=>(
+                        <th key={h} style={{ padding:'7px 10px',textAlign:'left',fontSize:10,fontWeight:700,color:'var(--text-muted)',textTransform:'uppercase' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reorder.map(p=>{
+                      const urgent = p.daysUntilStockout !== null && p.daysUntilStockout <= 7;
+                      const warning = p.daysUntilStockout !== null && p.daysUntilStockout <= 14;
+                      const dotColor = urgent ? '#EF4444' : warning ? '#F59E0B' : '#6B7280';
+                      return (
+                        <tr key={p.id} style={{ borderBottom:'1px solid var(--border)' }}>
+                          <td style={{ padding:'7px 10px',fontWeight:600 }}>{p.name}</td>
+                          <td style={{ padding:'7px 10px',color:dotColor,fontWeight:700 }}>{p.stock||0}</td>
+                          <td style={{ padding:'7px 10px',color:'var(--text-muted)' }}>{p.minStock||0}</td>
+                          <td style={{ padding:'7px 10px' }}>{p.soldLast30}</td>
+                          <td style={{ padding:'7px 10px' }}>
+                            {p.daysUntilStockout !== null ? (
+                              <span style={{ padding:'2px 8px',borderRadius:12,fontSize:11,fontWeight:700,background:urgent?'rgba(239,68,68,0.12)':warning?'rgba(245,158,11,0.12)':'rgba(107,114,128,0.12)',color:dotColor }}>
+                                {p.daysUntilStockout}d
+                              </span>
+                            ) : <span style={{ color:'var(--text-muted)' }}>—</span>}
+                          </td>
+                          <td style={{ padding:'7px 10px',fontWeight:700,color:'var(--primary-light)' }}>{p.suggestedReorder} units</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
+          </div>
         </div>
       )}
 
