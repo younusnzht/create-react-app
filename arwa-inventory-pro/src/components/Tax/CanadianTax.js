@@ -17,11 +17,11 @@ const getCurrencySymbol = (code) => {
 
 // ── Tax Number Validators ────────────────────────────────────────────────────
 function validateGSTNumber(num) {
-  const clean = (num || '').replace(/[\s\-]/g, '').toUpperCase();
+  const clean = (num || '').replace(/[\s-]/g, '').toUpperCase();
   return /^\d{9}RT\d{4}$/.test(clean);
 }
 function validateQSTNumber(num) {
-  const clean = (num || '').replace(/[\s\-]/g, '').toUpperCase();
+  const clean = (num || '').replace(/[\s-]/g, '').toUpperCase();
   return /^\d{10}TQ\d{4}$/.test(clean) || /^1\d{9}TQ\d{4}$/.test(clean);
 }
 function validatePSTNumber(num) {

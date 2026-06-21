@@ -2,11 +2,6 @@ import React, { useState } from 'react';
 import { Plus, Package, Hash, AlertTriangle, CheckCircle, X, ScanLine } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
-const TRACKING_TYPES = [
-  { id: 'none',   label: 'No Tracking',     desc: 'Standard inventory (default)' },
-  { id: 'batch',  label: 'Lot / Batch',      desc: 'Track by lot number & expiry — for food, pharma, cosmetics' },
-  { id: 'serial', label: 'Serial Number',    desc: 'Track individual units — for electronics, medical devices' },
-];
 
 function LotBadge({ lot }) {
   const expiry = lot.expiryDate ? new Date(lot.expiryDate) : null;
@@ -58,7 +53,7 @@ export default function LotTracker() {
   const [serialInput, setSerialInput] = useState('');
 
   const tracked = products.filter(p => p.trackingType && p.trackingType !== 'none');
-  const filtered = tracked.filter(p =>
+  const filtered = products.filter(p =>
     (filterType === 'all' || p.trackingType === filterType) &&
     (!search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase()))
   );
@@ -139,7 +134,7 @@ export default function LotTracker() {
           <div className="card">
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>All Products — Set Tracking</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-              {products.slice(0, 20).map(p => (
+              {filtered.slice(0, 20).map(p => (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: selectedProduct?.id === p.id ? 'rgba(79,70,229,0.1)' : 'var(--bg-tertiary)', border: `1px solid ${selectedProduct?.id === p.id ? 'var(--primary)' : 'var(--border)'}`, cursor: 'pointer' }} onClick={() => setSelectedProduct(products.find(pr => pr.id === p.id))}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 12 }}>{p.name}</div>

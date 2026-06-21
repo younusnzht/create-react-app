@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AlertTriangle, CheckCircle, Clock, Package, X, Plus, Download } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Package, X, Plus, Download } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 export default function Backorders() {
@@ -30,7 +30,6 @@ export default function Backorders() {
   };
 
   const fulfil = (bo) => {
-    const product = products.find(p => String(p.id) === String(bo.productId));
     updateBackorder(bo.id, { status: 'fulfilled', fulfilledAt: new Date().toISOString() });
     addAuditEntry('BACKORDER_FULFILLED', { boNumber: bo.boNumber, product: bo.productName });
   };

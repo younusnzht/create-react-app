@@ -5,8 +5,7 @@ import { useApp } from '../../contexts/AppContext';
 const LOCATIONS = ['Main Store', 'Branch B', 'Warehouse A', 'Warehouse B', 'Cold Storage', 'Dry Goods'];
 
 export default function StockTransfer() {
-  const { products, stockTransfers, addStockTransfer, updateProduct, addAuditEntry, currency } = useApp();
-  const sym = currency === 'CAD' ? 'CA$' : '$';
+  const { products, stockTransfers, addStockTransfer, updateProduct, addAuditEntry } = useApp();
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ fromLocation: 'Main Store', toLocation: 'Warehouse A', notes: '', items: [] });
