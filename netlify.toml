@@ -1,5 +1,9 @@
 [build]
-  base    = "docusaurus/website"
-  publish = "docusaurus/website/build"
+  base    = "arwa-inventory-pro"
+  publish = "build"
   command = "npm run build"
-  
+
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
