@@ -3,6 +3,7 @@ import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_H
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
 import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
+import { dbSet, dbGet } from '../services/db';
 
 function loadLS(key, fallback) {
   try {
@@ -143,6 +144,53 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
 
+  // ── Mirror business data to IndexedDB for durability ──────────────────────
+  useEffect(() => {
+    dbSet('arwa_products',       products);
+    dbSet('arwa_orders',         orders);
+    dbSet('arwa_customers',      customers);
+    dbSet('arwa_suppliers',      suppliers);
+    dbSet('arwa_users',          users);
+    dbSet('arwa_purchaseOrders', purchaseOrders);
+    dbSet('arwa_stockTransfers', stockTransfers);
+    dbSet('arwa_backorders',     backorders);
+    dbSet('arwa_payrollRecords', payrollRecords);
+    dbSet('arwa_customerInvoices', customerInvoices);
+    dbSet('arwa_expenses',       expenses);
+    dbSet('arwa_stockMovements', stockMovements);
+    dbSet('arwa_auditLog',       auditLog);
+    dbSet('arwa_onlineOrders',   onlineOrders);
+  }, [products, orders, customers, suppliers, users, purchaseOrders, stockTransfers,
+      backorders, payrollRecords, customerInvoices, expenses, stockMovements, auditLog, onlineOrders]);
+
+  // ── On startup: restore from IndexedDB if localStorage was cleared ────────
+  useEffect(() => {
+    (async () => {
+      const restoreKey = async (key, setter) => {
+        if (!localStorage.getItem(key)) {
+          const val = await dbGet(key);
+          if (val !== null) {
+            setter(val);
+            localStorage.setItem(key, JSON.stringify(val));
+          }
+        }
+      };
+      await restoreKey('arwa_products',        setProducts);
+      await restoreKey('arwa_orders',          setOrders);
+      await restoreKey('arwa_customers',       setCustomers);
+      await restoreKey('arwa_suppliers',       setSuppliers);
+      await restoreKey('arwa_users',           setUsers);
+      await restoreKey('arwa_purchaseOrders',  setPurchaseOrders);
+      await restoreKey('arwa_stockTransfers',  setStockTransfers);
+      await restoreKey('arwa_backorders',      setBackorders);
+      await restoreKey('arwa_payrollRecords',  setPayrollRecords);
+      await restoreKey('arwa_customerInvoices',setCustomerInvoices);
+      await restoreKey('arwa_expenses',        setExpenses);
+      await restoreKey('arwa_stockMovements',  setStockMovements);
+      await restoreKey('arwa_onlineOrders',    setOnlineOrders);
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── WebSocket — connect on mount, handle live order events ──────────────
   useEffect(() => {
     // Register status change callback
@@ -257,6 +305,53 @@ export function AppProvider({ children }) {
   const addCustomerInvoice    = useCallback((inv) => setCustomerInvoices(prev => [inv, ...prev]), []);
   const updateCustomerInvoice = useCallback((id, data) => setCustomerInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...data } : inv)), []);
   const addExpense             = useCallback((e) => setExpenses(prev => [e, ...prev]), []);
+
+  const exportAllData = useCallback(async () => {
+    const data = {};
+    const keys = ['arwa_products','arwa_orders','arwa_customers','arwa_suppliers',
+      'arwa_users','arwa_purchaseOrders','arwa_stockTransfers','arwa_backorders',
+      'arwa_payrollRecords','arwa_customerInvoices','arwa_expenses',
+      'arwa_stockMovements','arwa_auditLog','arwa_onlineOrders',
+      'arwa_taxConfig','arwa_subscription','arwa_businessName','arwa_currency'];
+    keys.forEach(k => {
+      try { const v = localStorage.getItem(k); if (v) data[k] = JSON.parse(v); } catch(e) {}
+    });
+    data['arwa_exportedAt'] = new Date().toISOString();
+    data['arwa_version'] = '1.0';
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arwa-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup downloaded successfully', 'success');
+  }, [showToast]);
+
+  const importAllData = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.arwa_products) { setProducts(data.arwa_products); localStorage.setItem('arwa_products', JSON.stringify(data.arwa_products)); }
+        if (data.arwa_orders)   { setOrders(data.arwa_orders);     localStorage.setItem('arwa_orders',   JSON.stringify(data.arwa_orders)); }
+        if (data.arwa_customers){ setCustomers(data.arwa_customers);localStorage.setItem('arwa_customers',JSON.stringify(data.arwa_customers)); }
+        if (data.arwa_suppliers){ setSuppliers(data.arwa_suppliers);localStorage.setItem('arwa_suppliers',JSON.stringify(data.arwa_suppliers)); }
+        if (data.arwa_purchaseOrders){ setPurchaseOrders(data.arwa_purchaseOrders);localStorage.setItem('arwa_purchaseOrders',JSON.stringify(data.arwa_purchaseOrders)); }
+        if (data.arwa_stockTransfers){ setStockTransfers(data.arwa_stockTransfers);localStorage.setItem('arwa_stockTransfers',JSON.stringify(data.arwa_stockTransfers)); }
+        if (data.arwa_backorders){ setBackorders(data.arwa_backorders);localStorage.setItem('arwa_backorders',JSON.stringify(data.arwa_backorders)); }
+        if (data.arwa_payrollRecords){ setPayrollRecords(data.arwa_payrollRecords);localStorage.setItem('arwa_payrollRecords',JSON.stringify(data.arwa_payrollRecords)); }
+        if (data.arwa_customerInvoices){ setCustomerInvoices(data.arwa_customerInvoices);localStorage.setItem('arwa_customerInvoices',JSON.stringify(data.arwa_customerInvoices)); }
+        if (data.arwa_expenses){ setExpenses(data.arwa_expenses);localStorage.setItem('arwa_expenses',JSON.stringify(data.arwa_expenses)); }
+        if (data.arwa_taxConfig){ setTaxConfigState(data.arwa_taxConfig);localStorage.setItem('arwa_taxConfig',JSON.stringify(data.arwa_taxConfig)); }
+        if (data.arwa_businessName){ setBusinessName(data.arwa_businessName);localStorage.setItem('arwa_businessName',JSON.stringify(data.arwa_businessName)); }
+        showToast('Data restored from backup successfully!', 'success');
+      } catch(err) {
+        showToast('Failed to import backup: invalid file format', 'error');
+      }
+    };
+    reader.readAsText(file);
+  }, [showToast, setTaxConfigState, setBusinessName]);
 
   const addStockMovement = useCallback(({ productId, productName, type, qty, note }) => {
     setStockMovements(prev => [{
@@ -525,6 +620,7 @@ export function AppProvider({ children }) {
     stockTransfers, addStockTransfer,
     backorders, addBackorder, updateBackorder,
     auditLog, addAuditEntry,
+    exportAllData, importAllData,
   }), [
     theme, toggleTheme, colorTheme, setColorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -547,6 +643,7 @@ export function AppProvider({ children }) {
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,
+    exportAllData, importAllData,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const SettingRow = ({ label, desc, children }) => (
@@ -217,7 +217,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
@@ -461,6 +461,21 @@ export default function Settings() {
                 )}
               </SettingRow>
             ))}
+            {section.title === 'Data & Backup' && (
+              <div style={{ padding: '16px 0', borderTop: '1px solid var(--border)', marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" onClick={() => exportAllData()}>
+                  <Download size={14} style={{ marginRight: 6 }}/> Export Backup (.json)
+                </button>
+                <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                  <Upload size={14} style={{ marginRight: 6 }}/> Import Backup
+                  <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) importAllData(e.target.files[0]); }} />
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                  Backup saves all products, orders, customers, suppliers and settings to a .json file.
+                  Import restores from a previous backup.
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
