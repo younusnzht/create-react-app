@@ -476,6 +476,55 @@ export default function Settings() {
                 </div>
               </div>
             )}
+            {section.title === 'Hardware' && (
+              <div style={{ padding: '16px 0', borderTop: '1px solid var(--border)', marginTop: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Thermal Printer (USB/Serial)</div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+                  Connect a USB thermal printer (Epson, Star, Bixolon) for auto-printing receipts. Requires Chrome or Edge browser.
+                </p>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label">Paper Width</label>
+                    <select className="form-control" value={localStorage.getItem('arwa_printerPaperWidth') || '80mm'}
+                      onChange={e => { localStorage.setItem('arwa_printerPaperWidth', e.target.value); showToast('Paper width saved', 'success'); }}>
+                      <option value="80mm">80mm (standard)</option>
+                      <option value="58mm">58mm (compact)</option>
+                    </select>
+                  </div>
+                  <div style={{ alignSelf: 'flex-end', paddingBottom: 2 }}>
+                    <button className="btn btn-secondary" onClick={async () => {
+                      if (!('serial' in navigator)) { showToast('Web Serial not supported — use Chrome or Edge', 'error'); return; }
+                      try {
+                        const { connectSerialPrinter } = await import('../../services/thermalPrinter');
+                        await connectSerialPrinter();
+                        showToast('Thermal printer connected!', 'success');
+                      } catch(e) { showToast(e.message, 'error'); }
+                    }}>
+                      <Printer size={14} style={{ marginRight: 6 }}/> Connect Printer
+                    </button>
+                  </div>
+                  <div style={{ alignSelf: 'flex-end', paddingBottom: 2 }}>
+                    <button className="btn btn-primary" onClick={async () => {
+                      const { printViaBrowser } = await import('../../services/thermalPrinter');
+                      printViaBrowser({
+                        businessName: 'Arwa Enterprises',
+                        receiptId: 'TEST-001',
+                        date: new Date().toLocaleString(),
+                        items: [{ name: 'Test Product', qty: 1, salePrice: 9.99 }],
+                        subtotal: 9.99, taxAmt: 0.50, total: 10.49,
+                        payments: [{ method: 'Cash', amount: 10.49 }],
+                        sym: '$',
+                      }, { paperWidth: localStorage.getItem('arwa_printerPaperWidth') || '80mm' });
+                    }}>
+                      Test Print
+                    </button>
+                  </div>
+                </div>
+                <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  If USB serial is unavailable, receipts open in a printer-friendly browser window automatically.
+                </p>
+              </div>
+            )}
           </div>
         ))}
 

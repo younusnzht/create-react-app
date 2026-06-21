@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown, CheckCircle, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { CATEGORIES } from '../../data/mockData';
 
@@ -127,6 +127,183 @@ function ProductModal({ product, suppliers, onClose, onSave }) {
   );
 }
 
+const TEMPLATE_HEADERS = ['Name','SKU','Barcode','Category','Supplier','Purchase Price','Sale Price','Stock','Min Stock','Tax %','Warehouse','Expiry (YYYY-MM-DD)'];
+const TEMPLATE_ROW = ['Paracetamol 500mg','MED-001','1234567890123','Pharmaceuticals','PharmaCo Ltd','2.50','5.99','100','20','0','Main Store','2027-12-31'];
+
+function downloadTemplate() {
+  const csv = [TEMPLATE_HEADERS.join(','), TEMPLATE_ROW.join(',')].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'arwa_product_import_template.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return { rows: [], errors: ['CSV must have a header row and at least one data row'] };
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''));
+  const rows = [];
+  const errors = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g,''));
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+    // Normalise common header names
+    const name         = row.name || row.product_name || row.item_name || '';
+    const sku          = row.sku || row.sku_code || `SKU-${Date.now()}-${i}`;
+    const barcode      = row.barcode || row.upc || row.ean || '';
+    const category     = row.category || row.cat || 'General';
+    const supplier     = row.supplier || row.vendor || '';
+    const purchasePrice= parseFloat(row.purchase_price || row.cost || row.cost_price || 0) || 0;
+    const salePrice    = parseFloat(row.sale_price || row.price || row.selling_price || 0) || 0;
+    const stock        = parseInt(row.stock || row.quantity || row.qty || 0) || 0;
+    const minStock     = parseInt(row.min_stock || row.minimum_stock || row.reorder_point || 5) || 5;
+    const tax          = parseFloat(row['tax_%'] || row.tax || row.tax_rate || 0) || 0;
+    const warehouse    = row.warehouse || row.location || 'Main Store';
+    const expiry       = row['expiry_(yyyy-mm-dd)'] || row.expiry || row.expiry_date || row.best_before || null;
+    const rowErrors = [];
+    if (!name) rowErrors.push('Name required');
+    if (salePrice <= 0) rowErrors.push('Sale price must be > 0');
+    rows.push({ _line: i + 1, _valid: rowErrors.length === 0, _errors: rowErrors,
+      name, sku, barcode, category, supplier, purchasePrice, salePrice, stock, minStock,
+      tax, warehouse, expiry: expiry || null, status: stock === 0 ? 'out_of_stock' : stock <= minStock ? 'low_stock' : 'active', image: null });
+  }
+  return { rows, errors };
+}
+
+function ImportCSVModal({ onClose, onImport }) {
+  const [rows, setRows] = useState([]);
+  const [parseErrors, setParseErrors] = useState([]);
+  const [fileName, setFileName] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const { rows: parsed, errors } = parseCSV(ev.target.result);
+      setRows(parsed);
+      setParseErrors(errors);
+    };
+    reader.readAsText(file);
+  };
+
+  const validRows = rows.filter(r => r._valid);
+  const invalidRows = rows.filter(r => !r._valid);
+
+  const handleImport = () => {
+    setImporting(true);
+    onImport(validRows);
+    setDone(true);
+    setImporting(false);
+  };
+
+  return (
+    <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+      <div style={{ background:'var(--bg-secondary)',borderRadius:16,padding:28,width:'100%',maxWidth:860,maxHeight:'90vh',overflow:'auto',border:'1px solid var(--border)' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+          <div>
+            <h2 style={{ margin:0,fontSize:18,fontWeight:800 }}>Import Products from CSV</h2>
+            <p style={{ margin:'4px 0 0',fontSize:12,color:'var(--text-muted)' }}>Upload a CSV file to bulk-import hundreds of products at once</p>
+          </div>
+          <button className="icon-btn" onClick={onClose}><X size={18}/></button>
+        </div>
+
+        {!done ? (
+          <>
+            <div style={{ display:'flex',gap:10,marginBottom:20,flexWrap:'wrap' }}>
+              <label className="btn btn-primary" style={{ cursor:'pointer' }}>
+                <Upload size={14} style={{ marginRight:6 }}/> Choose CSV File
+                <input type="file" accept=".csv,.txt" style={{ display:'none' }} onChange={handleFile} />
+              </label>
+              <button className="btn btn-secondary" onClick={downloadTemplate}>
+                <Download size={14} style={{ marginRight:6 }}/> Download Template
+              </button>
+              {fileName && <span style={{ alignSelf:'center',fontSize:12,color:'var(--text-muted)' }}>📄 {fileName}</span>}
+            </div>
+
+            {parseErrors.length > 0 && (
+              <div style={{ padding:12,background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:8,marginBottom:12,fontSize:12,color:'#EF4444' }}>
+                {parseErrors.map((e,i) => <div key={i}>⚠ {e}</div>)}
+              </div>
+            )}
+
+            {rows.length > 0 && (
+              <>
+                <div style={{ display:'flex',gap:16,marginBottom:14,flexWrap:'wrap' }}>
+                  <span style={{ fontSize:13,fontWeight:700 }}>{rows.length} rows detected</span>
+                  <span style={{ fontSize:12,color:'#10B981',fontWeight:600 }}>✓ {validRows.length} valid</span>
+                  {invalidRows.length > 0 && <span style={{ fontSize:12,color:'#EF4444',fontWeight:600 }}>✗ {invalidRows.length} invalid (will be skipped)</span>}
+                </div>
+                <div style={{ overflowX:'auto',marginBottom:16 }}>
+                  <table style={{ width:'100%',borderCollapse:'collapse',fontSize:11 }}>
+                    <thead>
+                      <tr style={{ borderBottom:'2px solid var(--border)' }}>
+                        {['#','Status','Name','SKU','Category','Purchase $','Sale $','Stock','Tax%','Warehouse'].map(h=>(
+                          <th key={h} style={{ padding:'6px 8px',textAlign:'left',color:'var(--text-muted)',fontWeight:700,textTransform:'uppercase',fontSize:10,whiteSpace:'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.slice(0,20).map((r,i)=>(
+                        <tr key={i} style={{ borderBottom:'1px solid var(--border)',background:r._valid?'transparent':'rgba(239,68,68,0.05)' }}>
+                          <td style={{ padding:'5px 8px',color:'var(--text-muted)' }}>{r._line}</td>
+                          <td style={{ padding:'5px 8px' }}>
+                            {r._valid
+                              ? <span style={{ color:'#10B981',fontWeight:700 }}>✓</span>
+                              : <span style={{ color:'#EF4444',fontSize:10 }} title={r._errors.join(', ')}>✗ {r._errors.join('; ')}</span>
+                            }
+                          </td>
+                          <td style={{ padding:'5px 8px',fontWeight:600 }}>{r.name||'—'}</td>
+                          <td style={{ padding:'5px 8px',fontFamily:'monospace',fontSize:10 }}>{r.sku}</td>
+                          <td style={{ padding:'5px 8px' }}>{r.category}</td>
+                          <td style={{ padding:'5px 8px' }}>${r.purchasePrice.toFixed(2)}</td>
+                          <td style={{ padding:'5px 8px',fontWeight:700,color:'var(--success)' }}>${r.salePrice.toFixed(2)}</td>
+                          <td style={{ padding:'5px 8px' }}>{r.stock}</td>
+                          <td style={{ padding:'5px 8px' }}>{r.tax}%</td>
+                          <td style={{ padding:'5px 8px' }}>{r.warehouse}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {rows.length > 20 && <p style={{ fontSize:11,color:'var(--text-muted)',marginTop:6 }}>Showing first 20 of {rows.length} rows</p>}
+                </div>
+                {invalidRows.length > 0 && (
+                  <div style={{ padding:10,background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:8,fontSize:11,marginBottom:14,color:'#F59E0B' }}>
+                    ⚠ {invalidRows.length} row(s) with errors will be skipped. Fix and re-upload to include them.
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{ display:'flex',gap:10,justifyContent:'flex-end',marginTop:16 }}>
+              <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleImport}
+                disabled={validRows.length === 0 || importing}
+              >
+                <Package size={14} style={{ marginRight:6 }}/> Import {validRows.length} Products
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ textAlign:'center',padding:'30px 0' }}>
+            <CheckCircle size={48} style={{ color:'#10B981',margin:'0 auto 16px',display:'block' }} />
+            <h3 style={{ fontWeight:800,marginBottom:8 }}>Import Complete!</h3>
+            <p style={{ color:'var(--text-muted)',marginBottom:20 }}>{validRows.length} products have been added to your inventory.</p>
+            <button className="btn btn-primary" onClick={onClose}>Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Inventory() {
   const { products, addProduct, updateProduct, deleteProduct, currency, showToast, suppliers } = useApp();
   const [search, setSearch] = useState('');
@@ -138,6 +315,7 @@ export default function Inventory() {
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showImportModal, setShowImportModal] = useState(false);
   const PER_PAGE = 8;
 
   const filteredAndSorted = useMemo(() => {
@@ -244,6 +422,13 @@ export default function Inventory() {
     showToast(`Updated ${selectedIds.length} product(s)`);
   };
 
+  const handleBulkImport = (rows) => {
+    rows.forEach(row => {
+      addProduct({ ...row, id: Date.now() + Math.random() });
+    });
+    showToast(`${rows.length} products imported successfully`, 'success');
+  };
+
   // Expiry helpers
   const now = new Date();
   const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -275,7 +460,7 @@ export default function Inventory() {
           <p>{products.length} total products across all warehouses</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm">
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowImportModal(true)}>
             <Upload size={13} /> Import CSV
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
@@ -485,6 +670,13 @@ export default function Inventory() {
             setShowModal(false);
             setEditProduct(null);
           }}
+        />
+      )}
+
+      {showImportModal && (
+        <ImportCSVModal
+          onClose={() => setShowImportModal(false)}
+          onImport={(rows) => { handleBulkImport(rows); }}
         />
       )}
     </div>

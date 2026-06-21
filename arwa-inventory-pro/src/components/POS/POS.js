@@ -200,32 +200,25 @@ export default function POS() {
     showToast(`Payment processed! Order ${orderId}`, 'success');
   };
 
-  const handlePrintReceipt = () => {
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html><head><title>Receipt</title>
-      <style>body{font-family:monospace;font-size:12px;width:280px;margin:auto}
-      .divider{border-top:1px dashed #000;margin:8px 0}
-      .row{display:flex;justify-content:space-between}
-      h2{text-align:center;font-size:14px}p{text-align:center}
-      </style></head><body>
-      <h2>Arwa Inventory Pro</h2>
-      <p>${new Date().toLocaleString()}</p>
-      <div class="divider"></div>
-      ${receipt.items.map(i => `<div class="row"><span>${i.qty}x ${i.name}</span><span>${sym}${(i.salePrice * i.qty).toFixed(2)}</span></div>`).join('')}
-      <div class="divider"></div>
-      <div class="row"><span>Subtotal</span><span>${sym}${receipt.subtotal.toFixed(2)}</span></div>
-      <div class="row"><span>Tax</span><span>${sym}${receipt.taxAmt.toFixed(2)}</span></div>
-      <div class="row"><b>TOTAL</b><b>${sym}${receipt.total.toFixed(2)}</b></div>
-      ${receipt.payment === 'cash' ? `<div class="row"><span>Cash</span><span>${sym}${receipt.cashGiven.toFixed(2)}</span></div><div class="row"><span>Change</span><span>${sym}${receipt.change.toFixed(2)}</span></div>` : ''}
-      <div class="divider"></div>
-      <p>Thank you for your purchase!</p>
-      <p>Order: ${receipt.id}</p>
-      </body></html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
+  const printerConfig = {
+    paperWidth: localStorage.getItem('arwa_printerPaperWidth') || '80mm',
+    businessName: localStorage.getItem('arwa_businessName')?.replace(/^"|"$/g,'') || 'Arwa Enterprises',
+    businessAddress: '',
+    gstNumber: (() => { try { return JSON.parse(localStorage.getItem('arwa_taxConfig') || '{}').gstNumber || ''; } catch(e) { return ''; }})(),
+  };
+
+  const handlePrintReceipt = async () => {
+    if (!receipt) return;
+    const { printReceipt: doPrint } = await import('../../services/thermalPrinter');
+    await doPrint({
+      ...receipt,
+      receiptId: receipt.id,
+      businessName: printerConfig.businessName,
+      businessAddress: printerConfig.businessAddress,
+      gstNumber: printerConfig.gstNumber,
+      date: new Date().toLocaleString(),
+      sym,
+    }, printerConfig);
   };
 
   const holdSale = () => {
