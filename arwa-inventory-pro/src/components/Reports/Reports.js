@@ -52,7 +52,7 @@ export default function Reports() {
 
   const totalRevenue = SALES_DATA.reduce((s, m) => s + m.revenue, 0);
   const totalRevenueFromOrders = useMemo(() => orders.reduce((s, o) => s + (o.total || 0), 0), [orders]);
-  const realCOGS = calcRealCOGS(orders, products);
+  const realCOGS = useMemo(() => calcRealCOGS(orders, products), [orders, products]);
   const grossProfit = totalRevenueFromOrders - realCOGS;
   const grossMargin = totalRevenueFromOrders > 0 ? (grossProfit / totalRevenueFromOrders * 100) : 0;
   const totalProfit = SALES_DATA.reduce((s, m) => s + m.profit, 0);
@@ -85,7 +85,7 @@ export default function Reports() {
       category: p.category,
       stock: p.stock,
       value: (p.stock * p.purchasePrice).toFixed(2),
-      margin: ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0) + '%',
+      margin: (p.salePrice > 0 ? ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0) : '0') + '%',
       status: p.stock === 0 ? 'Out of Stock' : p.stock <= p.minStock ? 'Low Stock' : 'Good',
       supplier: p.supplier,
     }));

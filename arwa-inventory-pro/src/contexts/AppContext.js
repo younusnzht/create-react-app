@@ -526,7 +526,7 @@ export function AppProvider({ children }) {
     backorders, addBackorder, updateBackorder,
     auditLog, addAuditEntry,
   }), [
-    theme, toggleTheme, colorTheme, currency, sidebarCollapsed, toast, showToast,
+    theme, toggleTheme, colorTheme, setColorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
     products, addProduct, updateProduct, deleteProduct,
     suppliers, addSupplier, updateSupplier,
@@ -543,7 +543,7 @@ export function AppProvider({ children }) {
     taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
     costingMethod, payrollRecords, addPayrollRecord,
     customerInvoices, addCustomerInvoice, updateCustomerInvoice,
-    expenses, addExpense,
+    expenses, addExpense, chartOfAccounts,
     completeOnboarding, setTaxConfig, calcOrderTax, addAuditEntry,
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,

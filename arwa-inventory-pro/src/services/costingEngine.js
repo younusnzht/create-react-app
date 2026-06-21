@@ -21,7 +21,8 @@ export function calcFIFOCost(lots = [], qtySold) {
 
 export function calcRealCOGS(orders = [], products = []) {
   return orders.reduce((total, order) => {
-    const items = order.items || order.cart || [];
+    const raw = order.items || order.cart || [];
+    const items = Array.isArray(raw) ? raw : [];
     return total + items.reduce((s, item) => {
       const product = products.find(p =>
         String(p.id) === String(item.productId || item.id) ||
@@ -38,7 +39,8 @@ export function classifyABC(products = [], orders = []) {
   // Sum revenue per product from order history
   const rev = {};
   orders.forEach(order => {
-    const items = order.items || order.cart || [];
+    const raw = order.items || order.cart || [];
+    const items = Array.isArray(raw) ? raw : [];
     items.forEach(item => {
       const pid = String(item.productId || item.id || '');
       const product = products.find(p => String(p.id) === pid || p.name?.toLowerCase() === item.name?.toLowerCase());
@@ -82,7 +84,8 @@ export function calcReorderAnalysis(products = [], orders = [], days = 30) {
   const cutoff = new Date(Date.now() - days * 86400000);
   const sold = {};
   orders.filter(o => new Date(o.date) > cutoff).forEach(order => {
-    const items = order.items || order.cart || [];
+    const raw = order.items || order.cart || [];
+    const items = Array.isArray(raw) ? raw : [];
     items.forEach(item => {
       const pid = String(item.productId || item.id || '');
       const product = products.find(p => String(p.id) === pid || p.name?.toLowerCase() === item.name?.toLowerCase());

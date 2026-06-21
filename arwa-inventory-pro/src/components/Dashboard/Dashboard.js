@@ -242,7 +242,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {topProducts.map(p => {
-                const margin = ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0);
+                const margin = p.salePrice > 0 ? ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(0) : '0';
                 return (
                   <tr key={p.id}>
                     <td style={{ fontWeight: 600 }}>{p.name}</td>
