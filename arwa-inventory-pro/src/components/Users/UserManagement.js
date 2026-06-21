@@ -208,7 +208,7 @@ export default function UserManagement() {
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <div style={{ width: 40, height: 40, borderRadius: '50%', background: roleCfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: roleCfg.color, flexShrink: 0 }}>
-                  {user.name.charAt(0)}
+                  {(user.name || '?').charAt(0)}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
@@ -225,7 +225,7 @@ export default function UserManagement() {
                       <Activity size={10} /> {user.branch}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Clock size={10} /> Last login: {new Date(user.lastLogin).toLocaleDateString()}
+                      <Clock size={10} /> Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                     </span>
                   </div>
                 </div>
