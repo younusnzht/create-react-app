@@ -630,6 +630,7 @@ export function AppProvider({ children }) {
     customers, setCustomers, addCustomer, updateCustomer, deleteCustomer,
     users, setUsers, addUser, deleteUser,
     orders, setOrders, addOrder,
+    quotes, addQuote, updateQuote, deleteQuote,
     onlineOrders, setOnlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, setAiMetrics,
@@ -660,7 +661,7 @@ export function AppProvider({ children }) {
     suppliers, addSupplier, updateSupplier,
     customers, addCustomer, updateCustomer, deleteCustomer,
     users, addUser, deleteUser,
-    orders, addOrder, quotes, // eslint-disable-line react-hooks/exhaustive-deps
+    orders, addOrder, quotes, addQuote, updateQuote, deleteQuote, // eslint-disable-line react-hooks/exhaustive-deps
     onlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, aiIssues, repairHistory, addRepair,

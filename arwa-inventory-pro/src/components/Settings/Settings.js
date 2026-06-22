@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload, Lock } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../data/mockData';
 import { useApp } from '../../contexts/AppContext';
 
@@ -334,7 +334,7 @@ export default function Settings() {
                       {bt.modules.map(p => (
                         <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                           <span style={{ color: '#10B981', fontWeight: 700 }}>✓</span>
-                          <span>{p === '/' ? 'Dashboard' : p.replace('/', '').replace(/-/g, ' ').replace(/\w/g, c => c.toUpperCase())}</span>
+                          <span>{p === '/' ? 'Dashboard' : p.replace('/', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
                         </div>
                       ))}
                     </div>
@@ -346,7 +346,7 @@ export default function Settings() {
                         {bt.addOns.map(p => (
                           <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                             <span style={{ color: '#F59E0B', fontWeight: 700 }}>🔒</span>
-                            <span style={{ color: 'var(--text-muted)' }}>{p.replace('/', '').replace(/-/g, ' ').replace(/\w/g, c => c.toUpperCase())}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>{p.replace('/', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
                           </div>
                         ))}
                       </div>
