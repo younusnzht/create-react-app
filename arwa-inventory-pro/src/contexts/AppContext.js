@@ -383,12 +383,13 @@ export function AppProvider({ children }) {
 
   // ─── till sessions ────────────────────────────────────────────────────────
 
-  const openTill = useCallback((floatAmount, user) => {
+  const openTill = useCallback((floatAmount, user, pin) => {
     setTillSessions(prev => [{
       id: 'TILL-' + Date.now(),
       openedAt: new Date().toISOString(),
       openedBy: user || (currentUser ? currentUser.name : 'Cashier'),
       openingFloat: parseFloat(floatAmount) || 0,
+      cashierPin: String(pin || ''),   // store PIN in session
       cashMovements: [],
       closingFloat: null,
       status: 'open',

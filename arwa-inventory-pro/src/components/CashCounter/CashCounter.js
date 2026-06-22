@@ -32,6 +32,7 @@ function formatDate(iso) {
 
 function ZReadModal({ session, cashSales, sym, onClose, onConfirmClose }) {
   const [countedCash, setCountedCash] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
 
   const movementsIn = (session.cashMovements || [])
     .filter(m => m.type === 'in')
@@ -45,6 +46,8 @@ function ZReadModal({ session, cashSales, sym, onClose, onConfirmClose }) {
   const counted = parseFloat(countedCash) || 0;
   const overShort = counted - expectedCash;
   const hasCountedValue = countedCash !== '';
+  const pinMatches = session.cashierPin ? confirmPin === session.cashierPin : true;
+  const showPinError = session.cashierPin && confirmPin.length === 4 && !pinMatches;
 
   const handlePrint = () => {
     const w = window.open('', '_blank', 'width=400,height=600');
@@ -112,6 +115,33 @@ function ZReadModal({ session, cashSales, sym, onClose, onConfirmClose }) {
             <X size={20} />
           </button>
         </div>
+
+        {session.cashierPin && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 13, marginBottom: 6 }}>
+              Confirm PIN to close till
+            </label>
+            <input
+              type="password"
+              maxLength={4}
+              pattern="[0-9]*"
+              inputMode="numeric"
+              placeholder="Enter 4-digit PIN"
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 8, boxSizing: 'border-box',
+                border: `1px solid ${showPinError ? '#EF4444' : 'var(--border)'}`,
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)', fontSize: 16, fontWeight: 600,
+                letterSpacing: '0.3em',
+              }}
+            />
+            {showPinError && (
+              <div style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>Incorrect PIN</div>
+            )}
+          </div>
+        )}
 
         <div style={{ marginBottom: 16 }}>
           <div style={rowStyle}>
@@ -183,10 +213,10 @@ function ZReadModal({ session, cashSales, sym, onClose, onConfirmClose }) {
           </button>
           <button
             onClick={() => onConfirmClose(session.id, counted)}
-            disabled={!hasCountedValue}
+            disabled={!hasCountedValue || !pinMatches}
             style={{
-              flex: 1, padding: '10px 0', borderRadius: 8, cursor: hasCountedValue ? 'pointer' : 'not-allowed',
-              border: 'none', background: hasCountedValue ? '#EF4444' : '#9CA3AF',
+              flex: 1, padding: '10px 0', borderRadius: 8, cursor: (hasCountedValue && pinMatches) ? 'pointer' : 'not-allowed',
+              border: 'none', background: (hasCountedValue && pinMatches) ? '#EF4444' : '#9CA3AF',
               color: '#fff', fontWeight: 600, display: 'flex',
               alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
@@ -217,6 +247,7 @@ export default function CashCounter() {
 
   // Open till form state
   const [openingFloat, setOpeningFloat] = useState('');
+  const [cashierPin, setCashierPin] = useState('');
 
   // Movement form state
   const [showMovementForm, setShowMovementForm] = useState(false);
@@ -266,8 +297,10 @@ export default function CashCounter() {
   const handleOpenTill = () => {
     const float = parseFloat(openingFloat);
     if (isNaN(float) || float < 0) return;
-    openTill(float, currentUser?.name || 'Cashier');
+    if (cashierPin.length !== 4) return;
+    openTill(float, currentUser?.name || 'Cashier', cashierPin);
     setOpeningFloat('');
+    setCashierPin('');
   };
 
   const handleAddMovement = () => {
@@ -532,14 +565,28 @@ export default function CashCounter() {
           onKeyDown={(e) => e.key === 'Enter' && handleOpenTill()}
           style={{ ...inputStyle, marginBottom: 16, fontSize: 18, fontWeight: 600, padding: '12px 14px' }}
         />
+        <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>
+          Cashier PIN (4 digits)
+        </label>
+        <input
+          type="password"
+          maxLength={4}
+          pattern="[0-9]*"
+          inputMode="numeric"
+          placeholder="••••"
+          value={cashierPin}
+          onChange={(e) => setCashierPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+          onKeyDown={(e) => e.key === 'Enter' && handleOpenTill()}
+          style={{ ...inputStyle, marginBottom: 16, fontSize: 18, fontWeight: 600, padding: '12px 14px', letterSpacing: '0.3em' }}
+        />
         <button
           onClick={handleOpenTill}
-          disabled={!openingFloat || parseFloat(openingFloat) < 0}
+          disabled={!openingFloat || parseFloat(openingFloat) < 0 || cashierPin.length !== 4}
           style={{
             ...btnPrimary,
             width: '100%', justifyContent: 'center', padding: '13px 0', fontSize: 16,
-            opacity: (!openingFloat || parseFloat(openingFloat) < 0) ? 0.5 : 1,
-            cursor: (!openingFloat || parseFloat(openingFloat) < 0) ? 'not-allowed' : 'pointer',
+            opacity: (!openingFloat || parseFloat(openingFloat) < 0 || cashierPin.length !== 4) ? 0.5 : 1,
+            cursor: (!openingFloat || parseFloat(openingFloat) < 0 || cashierPin.length !== 4) ? 'not-allowed' : 'pointer',
           }}
         >
           <Landmark size={18} /> Open Till
