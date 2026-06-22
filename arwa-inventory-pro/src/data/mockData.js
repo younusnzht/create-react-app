@@ -274,3 +274,54 @@ export const STOCK_MOVEMENTS = [
   { id: 5, productId: 6, productName: 'Vitamin D3 1000IU', type: 'receive', qty: 100, userId: 4, userName: 'Aisha Patel', time: '2026-07-15T10:15:00', note: 'Restocking from PharmaCo Ltd shipment' },
   { id: 6, productId: 12, productName: 'Coca-Cola 24-Pack', type: 'sale', qty: -12, userId: 3, userName: 'Mike Chen', time: '2026-07-15T12:00:00', note: 'Bulk sale to catering client' },
 ];
+
+export const BUSINESS_TYPES = {
+  restaurant: {
+    label: 'Restaurant / Food Service',
+    emoji: '🍽️',
+    modules: ['/', '/pos', '/online-orders', '/inventory', '/customers', '/suppliers', '/reports', '/accounting', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/barcode', '/payroll', '/tax', '/lot-tracking', '/purchase-orders', '/quotes'],
+  },
+  gas_station: {
+    label: 'Gas Station / Convenience Store',
+    emoji: '⛽',
+    modules: ['/', '/pos', '/inventory', '/customers', '/suppliers', '/reports', '/accounting', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/barcode', '/payroll', '/tax', '/purchase-orders', '/lot-tracking'],
+  },
+  grocery: {
+    label: 'Grocery Store / Supermarket',
+    emoji: '🛒',
+    modules: ['/', '/pos', '/inventory', '/customers', '/suppliers', '/purchase-orders', '/lot-tracking', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/payroll', '/online-orders', '/backorders', '/quotes'],
+  },
+  pharmacy: {
+    label: 'Pharmacy / Medical Supply',
+    emoji: '💊',
+    modules: ['/', '/pos', '/inventory', '/lot-tracking', '/customers', '/suppliers', '/purchase-orders', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/payroll', '/backorders', '/quotes'],
+  },
+  b2b_wholesale: {
+    label: 'B2B Wholesaler',
+    emoji: '🏭',
+    modules: ['/', '/inventory', '/customers', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/pos', '/payroll', '/online-orders', '/lot-tracking'],
+  },
+  distributor: {
+    label: 'Distributor / Logistics',
+    emoji: '🚚',
+    modules: ['/', '/inventory', '/customers', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/payroll', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/pos', '/online-orders', '/lot-tracking'],
+  },
+  general_retail: {
+    label: 'General Retail',
+    emoji: '🏪',
+    modules: ['/', '/pos', '/inventory', '/customers', '/suppliers', '/purchase-orders', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
+    addOns: ['/payroll', '/quotes', '/online-orders', '/lot-tracking', '/backorders'],
+  },
+  platform_admin: {
+    label: 'Platform Admin (All Modules)',
+    emoji: '⚙️',
+    modules: ['ALL'],
+    addOns: [],
+  },
+};

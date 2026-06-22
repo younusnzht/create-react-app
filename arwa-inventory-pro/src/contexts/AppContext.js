@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS } from '../data/mockData';
+import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS, BUSINESS_TYPES } from '../data/mockData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
 import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
@@ -102,7 +102,19 @@ export function AppProvider({ children }) {
     status: 'active',
     nextBilling: '2026-08-15',
     trialDaysLeft: 0,
+    businessType: 'platform_admin',
+    enabledModules: [],
   }));
+
+  const getEnabledModules = useCallback((sub = null) => {
+    const s = sub || subscription;
+    const type = BUSINESS_TYPES[s.businessType] || BUSINESS_TYPES.platform_admin;
+    if (type.modules[0] === 'ALL') return null; // null = show everything
+    // Merge base modules with any custom enabledModules overrides
+    const base = type.modules;
+    const overrides = s.enabledModules || [];
+    return [...new Set([...base, ...overrides])];
+  }, [subscription]);
 
   // ─── Canadian tax config ──────────────────────────────────────────────────
   const [taxConfig, setTaxConfigState] = useState(() => loadLS('arwa_taxConfig', {
@@ -625,7 +637,7 @@ export function AppProvider({ children }) {
     repairHistory, addRepair,
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
-    subscription, setSubscription,
+    subscription, setSubscription, getEnabledModules,
     apiKey, setApiKey,
     scanStats,
     wsStatus, wsClient,
@@ -654,7 +666,7 @@ export function AppProvider({ children }) {
     aiMetrics, aiIssues, repairHistory, addRepair,
     resolveIssue, runAIScan,
     stockMovements, addStockMovement,
-    subscription,
+    subscription, getEnabledModules,
     apiKey, setApiKey, scanStats, wsStatus, onboarded, businessName,
     taxConfig, auditLog, purchaseOrders, stockTransfers, backorders,
     costingMethod, payrollRecords, addPayrollRecord,

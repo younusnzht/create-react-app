@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload, Lock } from 'lucide-react';
+import { BUSINESS_TYPES } from '../../data/mockData';
 import { useApp } from '../../contexts/AppContext';
 
 const SettingRow = ({ label, desc, children }) => (
@@ -217,7 +218,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
@@ -291,6 +292,71 @@ export default function Settings() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Business Type & Module Manager */}
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header">
+            <h3 className="card-title">Business Type & Module Access</h3>
+            <p className="card-subtitle">Set the business type to control which modules are visible to users of this account</p>
+          </div>
+          <div className="card-body">
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="form-label">Business Type</label>
+              <select className="form-control" style={{ maxWidth: 360 }}
+                value={subscription?.businessType || 'platform_admin'}
+                onChange={e => {
+                  const newType = e.target.value;
+                  setSubscription(prev => ({ ...prev, businessType: newType, enabledModules: [] }));
+                  showToast(`Business type set to ${BUSINESS_TYPES[newType]?.label}`, 'success');
+                }}>
+                {Object.entries(BUSINESS_TYPES).map(([key, bt]) => (
+                  <option key={key} value={key}>{bt.emoji} {bt.label}</option>
+                ))}
+              </select>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                This controls which sidebar modules are visible. Add-on modules are shown as locked with an upgrade prompt.
+              </p>
+            </div>
+
+            {/* Module overview */}
+            {(() => {
+              const bt = BUSINESS_TYPES[subscription?.businessType || 'platform_admin'];
+              if (!bt || bt.modules[0] === 'ALL') return (
+                <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(79,70,229,0.1)', border: '1px solid rgba(79,70,229,0.3)', fontSize: 13, color: 'var(--primary-light)' }}>
+                  ⚙️ Platform Admin mode — all modules visible
+                </div>
+              );
+              return (
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Included Modules</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {bt.modules.map(p => (
+                        <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                          <span style={{ color: '#10B981', fontWeight: 700 }}>✓</span>
+                          <span>{p === '/' ? 'Dashboard' : p.replace('/', '').replace(/-/g, ' ').replace(/\w/g, c => c.toUpperCase())}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {bt.addOns.length > 0 && (
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Add-On Modules (locked)</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {bt.addOns.map(p => (
+                          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                            <span style={{ color: '#F59E0B', fontWeight: 700 }}>🔒</span>
+                            <span style={{ color: 'var(--text-muted)' }}>{p.replace('/', '').replace(/-/g, ' ').replace(/\w/g, c => c.toUpperCase())}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
 
         {/* AI & API Configuration */}
         <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
