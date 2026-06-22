@@ -162,7 +162,10 @@ function QuoteFormModal({ onClose, onSave, customers, products, currency }) {
                     <input type="number" min={0} step="0.01" value={item.unitPrice} onChange={e => updateItem(item.productId,'unitPrice',e.target.value)}
                       style={{ width:80,textAlign:'center',padding:'4px 6px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg-tertiary)',color:'var(--text)' }} />
                   </td>
-                  <td style={{ padding:'8px 10px',textAlign:'center',fontWeight:700,color:'var(--success)' }}>{sym}{((item.unitPrice||0)*(item.qty||1)).toFixed(2)}</td>
+                  <td style={{ padding:'8px 10px',textAlign:'center',fontWeight:700,color:'var(--success)' }}>
+                    {sym}{((item.unitPrice||0)*(item.qty||1)).toFixed(2)}
+                    {(() => { const prod = products.find(p => String(p.id) === String(item.productId)); return item.qty > (prod?.stock || 0) ? <span style={{ color:'#EF4444',fontSize:11,display:'block' }}>&#9888; Low stock</span> : null; })()}
+                  </td>
                   <td style={{ padding:'8px 10px',textAlign:'center' }}>
                     <button className="icon-btn" onClick={() => removeItem(item.productId)}><Trash2 size={13} style={{ color:'#EF4444' }} /></button>
                   </td>
@@ -291,7 +294,7 @@ function QuoteDetailPanel({ quote, customer, onClose, onAction, currency, busine
 
 export default function Quotes() {
   const { quotes, addQuote, updateQuote, deleteQuote, addOrder,
-          customers, products, currency, businessName, taxConfig, showToast } = useApp();
+          customers, products, updateProduct, currency, businessName, taxConfig, showToast } = useApp();
 
   const sym = currency === 'CAD' ? 'CA$' : '$';
   const [statusFilter, setStatusFilter] = useState('all');
@@ -332,7 +335,17 @@ export default function Quotes() {
         quoteRef: quote.quoteNumber,
         date: new Date().toISOString(),
       });
-      showToast(`Quote ${quote.quoteNumber} converted to order`, 'success');
+      // Decrement stock for each quoted item
+      (quote.items || []).forEach(item => {
+        const prod = products.find(p => String(p.id) === String(item.productId || item.id));
+        if (prod) {
+          const field = prod.stock !== undefined ? 'stock' : prod.quantity !== undefined ? 'quantity' : 'stockLevel';
+          const currentStock = Number(prod[field] || 0);
+          const newStock = Math.max(0, currentStock - (item.qty || item.quantity || 1));
+          updateProduct(prod.id, { [field]: newStock });
+        }
+      });
+      showToast('Quote converted — inventory updated', 'success');
     }
     updateQuote(id, { status: nextStatus });
   };
