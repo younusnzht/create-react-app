@@ -54,6 +54,9 @@ export default function POS() {
       showToast('Out of stock', 'warning');
       return;
     }
+    // Apply customer-specific contract price if set
+    const customPrice = selectedCustomer?.customPrices?.[String(product.id)];
+    const priceToUse = customPrice !== undefined ? customPrice : product.salePrice;
     setCart(prev => {
       const existing = prev.find(i => i.id === product.id);
       if (existing) {
@@ -61,7 +64,7 @@ export default function POS() {
         if (existing.qty >= maxQty) { showToast('Insufficient stock', 'warning'); return prev; }
         return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
       }
-      return [...prev, { ...product, qty: 1 }];
+      return [...prev, { ...product, salePrice: priceToUse, qty: 1 }];
     });
   };
 

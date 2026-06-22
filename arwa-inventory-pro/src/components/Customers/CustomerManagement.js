@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Plus, Search, X, Edit2, Trash2, Star } from 'lucide-react';
+import { Users, Plus, Search, X, Edit2, Trash2, Star, Tag } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const getCurrencySymbol = (code) => {
@@ -10,13 +10,16 @@ const getCurrencySymbol = (code) => {
 const BLANK_FORM = { name: '', email: '', phone: '', loyaltyPoints: 0, gstExempt: false, exemptionCertificate: '' };
 
 export default function CustomerManagement() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer, currency } = useApp();
+  const { customers, addCustomer, updateCustomer, deleteCustomer, currency, products } = useApp();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(BLANK_FORM);
   const [errors, setErrors] = useState({});
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showPricing, setShowPricing] = useState(false);
+  const [customPrices, setCustomPrices] = useState({});
+  const [priceSearch, setPriceSearch] = useState('');
 
   const sym = getCurrencySymbol(currency);
 
@@ -46,7 +49,9 @@ export default function CustomerManagement() {
   const openEdit = (c) => {
     setEditingId(c.id);
     setForm({ name: c.name, email: c.email, phone: c.phone || '', loyaltyPoints: c.loyaltyPoints || 0, gstExempt: c.gstExempt || false, exemptionCertificate: c.exemptionCertificate || '' });
+    setCustomPrices(c.customPrices || {});
     setErrors({});
+    setShowPricing(false);
     setShowModal(true);
   };
 
@@ -54,6 +59,9 @@ export default function CustomerManagement() {
     setShowModal(false);
     setEditingId(null);
     setForm(BLANK_FORM);
+    setCustomPrices({});
+    setShowPricing(false);
+    setPriceSearch('');
     setErrors({});
   };
 
@@ -61,7 +69,7 @@ export default function CustomerManagement() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     if (editingId) {
-      updateCustomer(editingId, { name: form.name, email: form.email, phone: form.phone, loyaltyPoints: Number(form.loyaltyPoints) || 0, gstExempt: form.gstExempt, exemptionCertificate: form.exemptionCertificate });
+      updateCustomer(editingId, { name: form.name, email: form.email, phone: form.phone, loyaltyPoints: Number(form.loyaltyPoints) || 0, gstExempt: form.gstExempt, exemptionCertificate: form.exemptionCertificate, customPrices });
     } else {
       addCustomer({
         ...form,
@@ -308,7 +316,71 @@ export default function CustomerManagement() {
                 disabled={!form.gstExempt} />
             </div>
 
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+            {/* Contract Pricing — only visible when editing */}
+            {editingId && (
+              <div style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                <button
+                  style={{ width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',background:'var(--bg-tertiary)',border:'none',cursor:'pointer',color:'var(--text)',fontWeight:700,fontSize:13 }}
+                  onClick={() => setShowPricing(v => !v)}
+                >
+                  <span style={{ display:'flex',alignItems:'center',gap:8 }}>
+                    <Tag size={14} style={{ color:'var(--primary-light)' }} />
+                    Contract Pricing
+                    {Object.keys(customPrices).length > 0 && (
+                      <span style={{ fontSize:11,padding:'2px 8px',borderRadius:10,background:'rgba(79,70,229,0.15)',color:'var(--primary-light)',fontWeight:700 }}>
+                        {Object.keys(customPrices).length} custom price{Object.keys(customPrices).length !== 1 ? 's' : ''} set
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ fontSize:11,color:'var(--text-muted)' }}>{showPricing ? '▲ Hide' : '▼ Set custom prices per product'}</span>
+                </button>
+
+                {showPricing && (
+                  <div style={{ padding:14 }}>
+                    <p style={{ fontSize:12,color:'var(--text-muted)',marginBottom:10 }}>
+                      Set a contract price for any product. Leave blank to use the standard sale price. These prices auto-apply in POS and Quotes.
+                    </p>
+                    <input className="form-control" placeholder="Search products…" value={priceSearch}
+                      onChange={e => setPriceSearch(e.target.value)} style={{ marginBottom:10 }} />
+                    <div style={{ maxHeight:240,overflowY:'auto',display:'flex',flexDirection:'column',gap:6 }}>
+                      {products
+                        .filter(p => !priceSearch || p.name?.toLowerCase().includes(priceSearch.toLowerCase()) || p.sku?.toLowerCase().includes(priceSearch.toLowerCase()))
+                        .slice(0, 30)
+                        .map(p => (
+                          <div key={p.id} style={{ display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:8,background:'var(--bg-tertiary)',border:`1px solid ${customPrices[String(p.id)] !== undefined ? 'var(--primary)' : 'var(--border)'}` }}>
+                            <div style={{ flex:1,minWidth:0 }}>
+                              <div style={{ fontWeight:600,fontSize:12,truncate:'ellipsis' }}>{p.name}</div>
+                              <div style={{ fontSize:11,color:'var(--text-muted)' }}>Standard: {sym}{(p.salePrice||0).toFixed(2)}</div>
+                            </div>
+                            <div style={{ display:'flex',alignItems:'center',gap:6,flexShrink:0 }}>
+                              <span style={{ fontSize:11,color:'var(--text-muted)' }}>{sym}</span>
+                              <input
+                                type="number" min={0} step="0.01" placeholder="contract price"
+                                value={customPrices[String(p.id)] !== undefined ? customPrices[String(p.id)] : ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setCustomPrices(prev => {
+                                    const next = { ...prev };
+                                    if (val === '' || val === null) { delete next[String(p.id)]; }
+                                    else { next[String(p.id)] = parseFloat(val); }
+                                    return next;
+                                  });
+                                }}
+                                style={{ width:90,padding:'4px 8px',borderRadius:6,border:'1px solid var(--border)',background:'var(--bg-secondary)',color:'var(--text)',fontSize:12 }}
+                              />
+                              {customPrices[String(p.id)] !== undefined && (
+                                <span style={{ fontSize:10,color:'var(--primary-light)',fontWeight:700 }}>✓</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSubmit}>
                 {editingId ? 'Save Changes' : 'Add Customer'}

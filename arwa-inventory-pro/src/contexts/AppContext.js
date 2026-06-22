@@ -69,6 +69,7 @@ export function AppProvider({ children }) {
   const [customerInvoices, setCustomerInvoices] = useState(() => loadLS('arwa_customerInvoices', []));
   const [expenses, setExpenses] = useState(() => loadLS('arwa_expenses', []));
   const [chartOfAccounts, setChartOfAccounts] = useState(() => loadLS('arwa_chartOfAccounts', null));
+  const [quotes, setQuotes] = useState(() => loadLS('arwa_quotes', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
   const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
@@ -140,6 +141,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_payrollRecords', JSON.stringify(payrollRecords)), [payrollRecords]);
   useEffect(() => localStorage.setItem('arwa_customerInvoices', JSON.stringify(customerInvoices)), [customerInvoices]);
   useEffect(() => localStorage.setItem('arwa_expenses',         JSON.stringify(expenses)),         [expenses]);
+  useEffect(() => localStorage.setItem('arwa_quotes',           JSON.stringify(quotes)),           [quotes]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -160,8 +162,9 @@ export function AppProvider({ children }) {
     dbSet('arwa_stockMovements', stockMovements);
     dbSet('arwa_auditLog',       auditLog);
     dbSet('arwa_onlineOrders',   onlineOrders);
+    dbSet('arwa_quotes',         quotes);
   }, [products, orders, customers, suppliers, users, purchaseOrders, stockTransfers,
-      backorders, payrollRecords, customerInvoices, expenses, stockMovements, auditLog, onlineOrders]);
+      backorders, payrollRecords, customerInvoices, expenses, stockMovements, auditLog, onlineOrders, quotes]);
 
   // ── On startup: restore from IndexedDB if localStorage was cleared ────────
   useEffect(() => {
@@ -188,6 +191,7 @@ export function AppProvider({ children }) {
       await restoreKey('arwa_expenses',        setExpenses);
       await restoreKey('arwa_stockMovements',  setStockMovements);
       await restoreKey('arwa_onlineOrders',    setOnlineOrders);
+      await restoreKey('arwa_quotes',          setQuotes);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -428,6 +432,22 @@ export function AppProvider({ children }) {
   // ─── orders ───────────────────────────────────────────────────────────────
 
   const addOrder            = useCallback((o) => { setOrders(prev => [{ ...o, id: o.id || `ORD-${Date.now()}`, date: o.date || new Date().toISOString() }, ...prev]); }, []);
+
+  // ─── quotes ───────────────────────────────────────────────────────────────
+  const addQuote = useCallback((q) => {
+    setQuotes(prev => {
+      const num = `QT-${String(prev.length + 1).padStart(4, '0')}`;
+      return [{ ...q, id: q.id || Date.now(), quoteNumber: q.quoteNumber || num, createdAt: new Date().toISOString(), status: q.status || 'draft' }, ...prev];
+    });
+    showToast('Quote created successfully');
+  }, [showToast]);
+  const updateQuote = useCallback((id, updates) => {
+    setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...updates, updatedAt: new Date().toISOString() } : q));
+  }, []);
+  const deleteQuote = useCallback((id) => {
+    setQuotes(prev => prev.filter(q => q.id !== id));
+    showToast('Quote deleted', 'info');
+  }, [showToast]);
   const addOnlineOrder      = useCallback((o) => { setOnlineOrders(prev => [{ ...o, id: o.id || `OO-${Date.now()}` }, ...prev]); }, []);
   const updateOnlineOrderStatus = useCallback((id, status) => { setOnlineOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o)); }, []);
 
@@ -628,7 +648,7 @@ export function AppProvider({ children }) {
     suppliers, addSupplier, updateSupplier,
     customers, addCustomer, updateCustomer, deleteCustomer,
     users, addUser, deleteUser,
-    orders, addOrder,
+    orders, addOrder, quotes, // eslint-disable-line react-hooks/exhaustive-deps
     onlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, aiIssues, repairHistory, addRepair,

@@ -27,6 +27,7 @@ import CustomerManagement from './components/Customers/CustomerManagement';
 import Payroll from './components/Payroll/Payroll';
 import CRAAuditExport from './components/Regulatory/CRAAuditExport';
 import Accounting from './components/Accounting/Accounting';
+import Quotes from './components/Quotes/Quotes';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -62,6 +63,7 @@ function AppLayout() {
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/cra-audit" element={<CRAAuditExport />} />
             <Route path="/accounting" element={<Accounting />} />
+            <Route path="/quotes" element={<Quotes />} />
           </Routes>
         </div>
       </div>
