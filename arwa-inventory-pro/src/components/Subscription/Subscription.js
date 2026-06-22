@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, X, Zap, Shield, Crown, CreditCard,
   Sparkles, ArrowRight, Check, AlertTriangle
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { SUBSCRIPTION_PLANS, SELF_HEALING_ADDON } from '../../data/mockData';
+import { SUBSCRIPTION_PLANS, SELF_HEALING_ADDON, ORDER_ADDON_PRICE } from '../../data/mockData';
 
 const PLAN_ICONS = { basic: Shield, intermediate: Zap, super: Crown };
 
 export default function Subscription() {
-  const { subscription, setSubscription, showToast } = useApp();
+  const { subscription, setSubscription, showToast, orders } = useApp();
   const [billing, setBilling] = useState(subscription.billing);
   const [showUpgradeModal, setShowUpgradeModal] = useState(null);
   const [showSelfHealModal, setShowSelfHealModal] = useState(false);
+
+  const currentMonthOrders = useMemo(() => {
+    const monthKey = new Date().toISOString().slice(0, 7);
+    return (orders || []).filter(o => o.date && o.date.startsWith(monthKey)).length;
+  }, [orders]);
 
   const plans = Object.values(SUBSCRIPTION_PLANS);
 
@@ -30,6 +35,11 @@ export default function Subscription() {
   };
 
   const currentPlan = SUBSCRIPTION_PLANS[subscription.plan];
+  const orderLimit = currentPlan.monthlyOrders;
+  const orderPct = orderLimit > 0 ? Math.min((currentMonthOrders / orderLimit) * 100, 100) : 0;
+  const overageOrders = Math.max(0, currentMonthOrders - orderLimit);
+  const overageCharges = Math.ceil(overageOrders / 1000) * ORDER_ADDON_PRICE;
+
   return (
     <div>
       <div className="page-header">
@@ -67,6 +77,22 @@ export default function Subscription() {
               </p>
             )}
           </div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+            <span style={{ color: 'var(--text-muted)' }}>Orders this month</span>
+            <span style={{ fontWeight: 700, color: orderPct >= 90 ? '#EF4444' : orderPct >= 70 ? '#F59E0B' : 'var(--success)' }}>
+              {currentMonthOrders.toLocaleString()} / {orderLimit > 0 ? orderLimit.toLocaleString() : '∞'}
+            </span>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 4, width: `${orderPct}%`, background: orderPct >= 90 ? '#EF4444' : orderPct >= 70 ? '#F59E0B' : '#10B981', transition: 'width 0.5s ease' }} />
+          </div>
+          {overageOrders > 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#EF4444', fontWeight: 600 }}>
+              ⚠ {overageOrders.toLocaleString()} orders over limit — add-on charge: CA${overageCharges}/month ($20 per 1,000 orders)
+            </div>
+          )}
         </div>
       </div>
 
@@ -125,6 +151,15 @@ export default function Subscription() {
                 )}
               </div>
               <div style={{ marginBottom: 20 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', background:'rgba(255,255,255,0.06)', borderRadius:8, marginBottom:12 }}>
+                  <span style={{ fontSize:22, fontWeight:900, color:'var(--primary-light)' }}>
+                    {plan.monthlyOrders > 0 ? plan.monthlyOrders.toLocaleString() : '∞'}
+                  </span>
+                  <div>
+                    <div style={{ fontSize:12, fontWeight:700 }}>orders / month</div>
+                    <div style={{ fontSize:11, color:'var(--text-muted)' }}>+$20 per 1,000 over limit</div>
+                  </div>
+                </div>
                 {plan.features.map((f, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
                     <CheckCircle size={14} style={{ color: plan.color, flexShrink: 0, marginTop: 1 }} />
