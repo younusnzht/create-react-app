@@ -28,6 +28,7 @@ import Payroll from './components/Payroll/Payroll';
 import CRAAuditExport from './components/Regulatory/CRAAuditExport';
 import Accounting from './components/Accounting/Accounting';
 import Quotes from './components/Quotes/Quotes';
+import CashCounter from './components/CashCounter/CashCounter';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -64,6 +65,7 @@ function AppLayout() {
             <Route path="/cra-audit" element={<CRAAuditExport />} />
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/quotes" element={<Quotes />} />
+            <Route path="/cash-counter" element={<CashCounter />} />
           </Routes>
         </div>
       </div>

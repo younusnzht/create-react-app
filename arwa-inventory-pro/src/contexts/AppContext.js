@@ -71,6 +71,7 @@ export function AppProvider({ children }) {
   const [chartOfAccounts, setChartOfAccounts] = useState(() => loadLS('arwa_chartOfAccounts', null));
   const [quotes, setQuotes] = useState(() => loadLS('arwa_quotes', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
+  const [tillSessions, setTillSessions] = useState(() => loadLS('arwa_till_sessions', []));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
   const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
 
@@ -157,6 +158,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
+  useEffect(() => localStorage.setItem('arwa_till_sessions', JSON.stringify(tillSessions)), [tillSessions]);
 
   // ── Mirror business data to IndexedDB for durability ──────────────────────
   useEffect(() => {
@@ -378,6 +380,38 @@ export function AppProvider({ children }) {
       note: note || '',
     }, ...prev]);
   }, [currentUser]);
+
+  // ─── till sessions ────────────────────────────────────────────────────────
+
+  const openTill = useCallback((floatAmount, user) => {
+    setTillSessions(prev => [{
+      id: 'TILL-' + Date.now(),
+      openedAt: new Date().toISOString(),
+      openedBy: user || (currentUser ? currentUser.name : 'Cashier'),
+      openingFloat: parseFloat(floatAmount) || 0,
+      cashMovements: [],
+      closingFloat: null,
+      status: 'open',
+    }, ...prev]);
+    showToast('Till opened successfully', 'success');
+  }, [currentUser, showToast]);
+
+  const closeTill = useCallback((sessionId, countedCash) => {
+    setTillSessions(prev => prev.map(s =>
+      s.id === sessionId
+        ? { ...s, status: 'closed', closedAt: new Date().toISOString(), closingFloat: parseFloat(countedCash) || 0 }
+        : s
+    ));
+    showToast('Till closed and Z-Read saved', 'success');
+  }, [showToast]);
+
+  const addCashMovement = useCallback((sessionId, movement) => {
+    setTillSessions(prev => prev.map(s =>
+      s.id === sessionId
+        ? { ...s, cashMovements: [...(s.cashMovements || []), { ...movement, at: new Date().toISOString() }] }
+        : s
+    ));
+  }, []);
 
   // ─── products ─────────────────────────────────────────────────────────────
 
@@ -619,6 +653,8 @@ export function AppProvider({ children }) {
 
   // ─── context value ────────────────────────────────────────────────────────
 
+  const currentTillSession = tillSessions.find(s => s.status === 'open') || null;
+
   const value = useMemo(() => ({
     theme, toggleTheme, colorTheme, setColorTheme,
     currency, setCurrency,
@@ -654,6 +690,7 @@ export function AppProvider({ children }) {
     backorders, addBackorder, updateBackorder,
     auditLog, addAuditEntry,
     exportAllData, importAllData,
+    tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
   }), [
     theme, toggleTheme, colorTheme, setColorTheme, currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
@@ -677,6 +714,7 @@ export function AppProvider({ children }) {
     addPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder,
     addStockTransfer, addBackorder, updateBackorder,
     exportAllData, importAllData,
+    tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

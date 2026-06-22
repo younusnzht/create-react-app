@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { BUSINESS_TYPES } from '../../data/mockData';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/inventory', label: 'Inventory', icon: Package },
   { path: '/pos', label: 'Point of Sale', icon: ShoppingCart },
+  { path: '/cash-counter', label: 'Cash Counter', icon: Landmark },
   { path: '/online-orders', label: 'Online Orders', icon: UtensilsCrossed },
   { path: '/barcode', label: 'Barcode System', icon: QrCode },
   { section: 'Management' },
