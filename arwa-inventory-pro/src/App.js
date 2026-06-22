@@ -29,6 +29,7 @@ import CRAAuditExport from './components/Regulatory/CRAAuditExport';
 import Accounting from './components/Accounting/Accounting';
 import Quotes from './components/Quotes/Quotes';
 import CashCounter from './components/CashCounter/CashCounter';
+import ModuleGuard from './components/Layout/ModuleGuard';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -45,27 +46,27 @@ function AppLayout() {
         <div className="page-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/pos" element={<POS />} />
-            <Route path="/barcode" element={<BarcodeSystem />} />
-            <Route path="/users" element={<UserManagement />} />
-            <Route path="/reports" element={<Reports />} />
+            <Route path="/inventory" element={<ModuleGuard path="/inventory"><Inventory /></ModuleGuard>} />
+            <Route path="/pos" element={<ModuleGuard path="/pos"><POS /></ModuleGuard>} />
+            <Route path="/barcode" element={<ModuleGuard path="/barcode"><BarcodeSystem /></ModuleGuard>} />
+            <Route path="/users" element={<ModuleGuard path="/users"><UserManagement /></ModuleGuard>} />
+            <Route path="/reports" element={<ModuleGuard path="/reports"><Reports /></ModuleGuard>} />
             <Route path="/ai-guardian" element={<AIGuardian />} />
             <Route path="/subscription" element={<Subscription />} />
-            <Route path="/suppliers" element={<Suppliers />} />
-            <Route path="/online-orders" element={<OnlineOrders />} />
-            <Route path="/customers" element={<CustomerManagement />} />
+            <Route path="/suppliers" element={<ModuleGuard path="/suppliers"><Suppliers /></ModuleGuard>} />
+            <Route path="/online-orders" element={<ModuleGuard path="/online-orders"><OnlineOrders /></ModuleGuard>} />
+            <Route path="/customers" element={<ModuleGuard path="/customers"><CustomerManagement /></ModuleGuard>} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/tax" element={<CanadianTax />} />
-            <Route path="/lot-tracking" element={<LotTracker />} />
-            <Route path="/purchase-orders" element={<PurchaseOrders />} />
-            <Route path="/stock-transfers" element={<StockTransfer />} />
-            <Route path="/backorders" element={<Backorders />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/cra-audit" element={<CRAAuditExport />} />
-            <Route path="/accounting" element={<Accounting />} />
-            <Route path="/quotes" element={<Quotes />} />
-            <Route path="/cash-counter" element={<CashCounter />} />
+            <Route path="/tax" element={<ModuleGuard path="/tax"><CanadianTax /></ModuleGuard>} />
+            <Route path="/lot-tracking" element={<ModuleGuard path="/lot-tracking"><LotTracker /></ModuleGuard>} />
+            <Route path="/purchase-orders" element={<ModuleGuard path="/purchase-orders"><PurchaseOrders /></ModuleGuard>} />
+            <Route path="/stock-transfers" element={<ModuleGuard path="/stock-transfers"><StockTransfer /></ModuleGuard>} />
+            <Route path="/backorders" element={<ModuleGuard path="/backorders"><Backorders /></ModuleGuard>} />
+            <Route path="/payroll" element={<ModuleGuard path="/payroll"><Payroll /></ModuleGuard>} />
+            <Route path="/cra-audit" element={<ModuleGuard path="/cra-audit"><CRAAuditExport /></ModuleGuard>} />
+            <Route path="/accounting" element={<ModuleGuard path="/accounting"><Accounting /></ModuleGuard>} />
+            <Route path="/quotes" element={<ModuleGuard path="/quotes"><Quotes /></ModuleGuard>} />
+            <Route path="/cash-counter" element={<ModuleGuard path="/cash-counter"><CashCounter /></ModuleGuard>} />
           </Routes>
         </div>
       </div>
