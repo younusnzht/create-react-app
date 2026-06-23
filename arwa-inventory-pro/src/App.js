@@ -30,6 +30,7 @@ import Accounting from './components/Accounting/Accounting';
 import Quotes from './components/Quotes/Quotes';
 import CashCounter from './components/CashCounter/CashCounter';
 import ModuleGuard from './components/Layout/ModuleGuard';
+import MasterPanel from './components/Master/MasterPanel';
 
 function AppLayout() {
   const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
@@ -67,6 +68,7 @@ function AppLayout() {
             <Route path="/accounting" element={<ModuleGuard path="/accounting"><Accounting /></ModuleGuard>} />
             <Route path="/quotes" element={<ModuleGuard path="/quotes"><Quotes /></ModuleGuard>} />
             <Route path="/cash-counter" element={<ModuleGuard path="/cash-counter"><CashCounter /></ModuleGuard>} />
+            <Route path="/master" element={<MasterPanel />} />
           </Routes>
         </div>
       </div>

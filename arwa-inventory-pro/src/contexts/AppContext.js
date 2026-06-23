@@ -5,6 +5,8 @@ import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
 import { dbSet, dbGet } from '../services/db';
 
+export const SUPER_ADMIN_EMAIL = 'pharmacist_younus@yahoo.com';
+
 function loadLS(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -37,6 +39,9 @@ export function AppProvider({ children }) {
   const [fontSize, setFontSize] = useState(() => loadLS('arwa_fontSize', '14'));
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Client configurations — managed only by super admin
+  const [clientConfigs, setClientConfigs] = useState(() => loadLS('arwa_clientConfigs', []));
 
   // auth
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -174,6 +179,8 @@ export function AppProvider({ children }) {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-color-theme', colorTheme);
   }, [theme, colorTheme]);
+
+  const isSuperAdmin = currentUser?.role === 'superadmin' || currentUser?.email === SUPER_ADMIN_EMAIL;
   useEffect(() => localStorage.setItem('arwa_products',      JSON.stringify(products)),      [products]);
   useEffect(() => localStorage.setItem('arwa_users',         JSON.stringify(users)),         [users]);
   useEffect(() => localStorage.setItem('arwa_orders',        JSON.stringify(orders)),        [orders]);
@@ -197,6 +204,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
   useEffect(() => localStorage.setItem('arwa_till_sessions', JSON.stringify(tillSessions)), [tillSessions]);
+  useEffect(() => localStorage.setItem('arwa_clientConfigs', JSON.stringify(clientConfigs)), [clientConfigs]);
 
   // ── Mirror business data to IndexedDB for durability ──────────────────────
   useEffect(() => {
@@ -673,13 +681,28 @@ export function AppProvider({ children }) {
   // ─── auth ─────────────────────────────────────────────────────────────────
 
   const login = useCallback((email, password) => {
-    // Check live users state first; fall back to mock USERS so demo credentials
-    // always work even if localStorage data is missing the password field.
     const found = users.find(u => u.email === email && u.password === password)
       || USERS.find(u => u.email === email && u.password === password);
-    if (found) { setCurrentUser(found); setIsAuthenticated(true); return true; }
-    return false;
-  }, [users]);
+    if (!found) return false;
+    setCurrentUser(found);
+    setIsAuthenticated(true);
+    // If this user is a super admin, don't apply client config
+    if (found.role === 'superadmin' || found.email === SUPER_ADMIN_EMAIL) return true;
+    // Check if there's a client config for this email or domain
+    const emailDomain = email.split('@')[1];
+    const clientCfg = clientConfigs.find(c =>
+      c.email === email || (c.domain && emailDomain && c.domain.toLowerCase() === emailDomain.toLowerCase())
+    );
+    if (clientCfg && clientCfg.status === 'active') {
+      setSubscription(prev => ({
+        ...prev,
+        businessType: clientCfg.businessType || prev.businessType,
+        plan: clientCfg.plan || prev.plan,
+        moduleOverrides: clientCfg.moduleOverrides || {},
+      }));
+    }
+    return true;
+  }, [users, clientConfigs]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);
@@ -730,6 +753,7 @@ export function AppProvider({ children }) {
     auditLog, addAuditEntry,
     exportAllData, importAllData,
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
+    isSuperAdmin, clientConfigs, setClientConfigs,
   }), [
     theme, toggleTheme, colorTheme, setColorTheme, fontFamily, fontSize,
     currency, sidebarCollapsed, toast, showToast,
@@ -755,6 +779,7 @@ export function AppProvider({ children }) {
     addStockTransfer, addBackorder, updateBackorder,
     exportAllData, importAllData,
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
+    isSuperAdmin, clientConfigs,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

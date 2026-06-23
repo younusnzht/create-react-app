@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload, Lock } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../data/mockData';
 import { useApp } from '../../contexts/AppContext';
 
@@ -218,7 +218,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription, isSuperAdmin } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
@@ -360,17 +360,27 @@ export default function Settings() {
                 <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 24 }}>
                   <div style={{ flex: 1, minWidth: 240 }}>
                     <label className="form-label">Business Type Preset</label>
-                    <select className="form-control"
-                      value={subscription?.businessType || 'platform_admin'}
-                      onChange={e => {
-                        const newType = e.target.value;
-                        setSubscription(prev => ({ ...prev, businessType: newType, enabledModules: [], moduleOverrides: {} }));
-                        showToast(`Preset changed to ${BUSINESS_TYPES[newType]?.label} — toggles reset`, 'success');
-                      }}>
-                      {Object.entries(BUSINESS_TYPES).map(([key, bt]) => (
-                        <option key={key} value={key}>{bt.emoji} {bt.label}</option>
-                      ))}
-                    </select>
+                    {isSuperAdmin ? (
+                      <select className="form-control"
+                        value={subscription?.businessType || 'platform_admin'}
+                        onChange={e => {
+                          const newType = e.target.value;
+                          setSubscription(prev => ({ ...prev, businessType: newType, enabledModules: [], moduleOverrides: {} }));
+                          showToast(`Preset changed to ${BUSINESS_TYPES[newType]?.label} — toggles reset`, 'success');
+                        }}>
+                        {Object.entries(BUSINESS_TYPES).map(([key, bt]) => (
+                          <option key={key} value={key}>{bt.emoji} {bt.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(91,95,207,0.07)', border: '1px solid rgba(91,95,207,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Lock size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{BUSINESS_TYPES[subscription?.businessType]?.emoji} {BUSINESS_TYPES[subscription?.businessType]?.label}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Assigned by your platform administrator. Contact Arwa support to change.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>

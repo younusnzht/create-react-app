@@ -148,6 +148,7 @@ export const SUPPLIERS = [
 ];
 
 export const USERS = [
+  { id: 0, name: 'Younus (Master)', email: 'pharmacist_younus@yahoo.com', password: 'Arwa@Master2026', role: 'superadmin', status: 'active', lastLogin: '2026-06-23T10:00:00', branch: 'All Branches', permissions: ['all'] },
   { id: 1, name: 'Admin User', email: 'admin@arwaenterprises.com', password: 'admin123', role: 'admin', status: 'active', lastLogin: '2026-07-15T09:30:00', branch: 'All Branches', permissions: ['all'] },
   { id: 2, name: 'Sarah Johnson', email: 'sarah@arwaenterprises.com', password: 'pass1234', role: 'manager', status: 'active', lastLogin: '2026-07-15T08:15:00', branch: 'Main Store', permissions: ['inventory', 'reports', 'pos', 'users_view'] },
   { id: 3, name: 'Mike Chen', email: 'mike@arwaenterprises.com', password: 'pass1234', role: 'cashier', status: 'active', lastLogin: '2026-07-15T07:45:00', branch: 'Main Store', permissions: ['pos'] },

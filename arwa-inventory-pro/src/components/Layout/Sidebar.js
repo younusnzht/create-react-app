@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, getEnabledModules } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, getEnabledModules, isSuperAdmin } = useApp();
 
   const criticalIssues = aiIssues.filter(i => i.severity === 'critical' && i.status === 'pending').length;
   const newOrderCount = onlineOrders?.filter(o => o.status === 'new').length || 0;
@@ -65,6 +65,16 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
+        {isSuperAdmin && (
+          <NavLink
+            to="/master"
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            style={{ background: 'rgba(91,95,207,0.12)', borderLeft: '2px solid rgba(91,95,207,0.4)', margin: '0 4px 8px' }}
+          >
+            <Crown className="nav-icon" size={18} style={{ color: '#F59E0B' }} />
+            <span className="nav-label" style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Master Control</span>
+          </NavLink>
+        )}
         {NAV_ITEMS.map((item, i) => {
           if (item.section) {
             return <div key={i} className="nav-section-label">{item.section}</div>;
