@@ -41,10 +41,18 @@ export default function Sidebar() {
   const newOrderCount = onlineOrders?.filter(o => o.status === 'new').length || 0;
 
   const enabledModules = getEnabledModules();
+  const isStaffUser = currentUser && !['admin', 'client', 'superadmin'].includes(currentUser.role);
 
   const isModuleEnabled = (path) => {
-    if (!enabledModules) return true; // platform_admin sees all
-    return enabledModules.includes(path);
+    if (!enabledModules) {
+      // platform_admin sees all, but still respect staff allowedModules
+      if (isStaffUser && currentUser.allowedModules) return currentUser.allowedModules.includes(path);
+      return true;
+    }
+    if (!enabledModules.includes(path)) return false;
+    // Staff users: also filter by their personal allowedModules
+    if (isStaffUser && currentUser.allowedModules) return currentUser.allowedModules.includes(path);
+    return true;
   };
 
   return (

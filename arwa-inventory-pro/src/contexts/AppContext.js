@@ -181,6 +181,7 @@ export function AppProvider({ children }) {
   }, [theme, colorTheme]);
 
   const isSuperAdmin = currentUser?.role === 'superadmin' || currentUser?.email === SUPER_ADMIN_EMAIL;
+  const isCompanyAdmin = isSuperAdmin || currentUser?.role === 'admin' || currentUser?.role === 'client';
   useEffect(() => localStorage.setItem('arwa_products',      JSON.stringify(products)),      [products]);
   useEffect(() => localStorage.setItem('arwa_users',         JSON.stringify(users)),         [users]);
   useEffect(() => localStorage.setItem('arwa_orders',        JSON.stringify(orders)),        [orders]);
@@ -753,7 +754,7 @@ export function AppProvider({ children }) {
     auditLog, addAuditEntry,
     exportAllData, importAllData,
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
-    isSuperAdmin, clientConfigs, setClientConfigs,
+    isSuperAdmin, isCompanyAdmin, clientConfigs, setClientConfigs,
   }), [
     theme, toggleTheme, colorTheme, setColorTheme, fontFamily, fontSize,
     currency, sidebarCollapsed, toast, showToast,
@@ -779,7 +780,7 @@ export function AppProvider({ children }) {
     addStockTransfer, addBackorder, updateBackorder,
     exportAllData, importAllData,
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
-    isSuperAdmin, clientConfigs,
+    isSuperAdmin, isCompanyAdmin, clientConfigs,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
