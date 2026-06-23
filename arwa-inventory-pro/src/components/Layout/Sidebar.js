@@ -52,8 +52,8 @@ export default function Sidebar() {
       <div className="sidebar-logo">
         <div className="logo-icon">A</div>
         <div className="logo-text">
-          <h2>Arwa Inventory</h2>
-          <p>Pro Edition</p>
+          <h2>Arwa 1.0</h2>
+          <p>Enterprise Platform</p>
         </div>
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

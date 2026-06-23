@@ -1,7 +1,7 @@
 {
   "name": "arwa-inventory-pro",
   "version": "1.0.0",
-  "description": "Arwa Inventory Pro - Enterprise AI-Powered Inventory Management System",
+  "description": "Arwa 1.0 - Enterprise AI-Powered Business Platform",
   "private": true,
   "dependencies": {
     "date-fns": "^2.30.0",

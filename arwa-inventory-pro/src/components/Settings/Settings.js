@@ -280,7 +280,7 @@ export default function Settings() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>Settings</h1>
-          <p>Configure Arwa Inventory Pro for your business</p>
+          <p>Configure Arwa 1.0 for your business</p>
         </div>
         <button className="btn btn-primary" onClick={() => {
           localStorage.setItem('arwa_settings', JSON.stringify(settings));

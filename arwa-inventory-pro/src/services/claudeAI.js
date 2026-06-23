@@ -1,4 +1,4 @@
-// Claude AI Service — Arwa Inventory Pro
+// Claude AI Service — Arwa 1.0
 // Haiku for scans (cost-efficient) · Sonnet for self-healing (quality)
 // Prompt caching enabled on both to cut input token costs by up to 90%
 
@@ -55,7 +55,7 @@ Respond ONLY with valid JSON — no markdown, no prose outside the JSON:
   "recommendations": ["<top 3 immediate actions>"]
 }`;
 
-const HEAL_SYSTEM_PROMPT = `You are Arwa AI Self-Healing Engine, an autonomous repair system for Arwa Inventory Pro.
+const HEAL_SYSTEM_PROMPT = `You are Arwa AI Self-Healing Engine, an autonomous repair system for Arwa 1.0.
 
 You analyse issues and generate safe, specific remediation plans.
 

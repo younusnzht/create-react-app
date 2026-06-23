@@ -67,9 +67,9 @@ export default function Login() {
             boxShadow: '0 0 30px rgba(79,70,229,0.4)',
           }}>A</div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>
-            Arwa Inventory Pro
+            Arwa 1.0
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Arwa Enterprises</p>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Enterprise Business Platform</p>
         </div>
 
         <form onSubmit={handleSubmit}>

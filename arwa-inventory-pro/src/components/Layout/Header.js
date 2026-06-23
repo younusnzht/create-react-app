@@ -34,7 +34,7 @@ export default function Header({ searchQuery, setSearchQuery }) {
   const location = useLocation();
   const notifRef = useRef(null);
 
-  const title = PAGE_TITLES[location.pathname] || 'Arwa Inventory Pro';
+  const title = PAGE_TITLES[location.pathname] || 'Arwa 1.0';
 
   useEffect(() => {
     const handler = (e) => {

@@ -120,7 +120,7 @@ export function buildReceiptBytes(receiptData, config = {}) {
   push(divider(width) + '\n');
   push(ALIGN_CENTER);
   push('Thank you for shopping with us!\n');
-  push('Powered by Arwa Inventory Pro\n');
+  push('Powered by Arwa 1.0\n');
   push(LINE_FEED); push(LINE_FEED); push(LINE_FEED);
   push(CUT_PAPER);
 
@@ -209,7 +209,7 @@ ${receiptData.loyaltyRedeemed > 0 ? `<div class="row"><span>Loyalty Redeemed</sp
 ${receiptData.loyaltyEarned > 0 ? `<div>Loyalty Earned: +${receiptData.loyaltyEarned} pts</div>` : ''}
 <div class="divider"></div>
 <div class="center">Thank you for your business!</div>
-<div class="center">Powered by Arwa Inventory Pro</div>
+<div class="center">Powered by Arwa 1.0</div>
 <br><br>
 </body></html>`;
 

@@ -52,7 +52,7 @@ function StepWelcome({ onNext }) {
         fontSize: 36, fontWeight: 900, color: 'white',
       }}>A</div>
       <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 12, color: 'var(--text-primary)' }}>
-        Welcome to Arwa Inventory Pro!
+        Welcome to Arwa 1.0!
       </h2>
       <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 420, margin: '0 auto 32px', lineHeight: 1.6 }}>
         Let's get your business set up in just a few minutes. We'll walk you through the essentials — you can always change everything later.
@@ -379,7 +379,7 @@ export default function OnboardingWizard() {
 
   const finish = () => {
     completeOnboarding(bizData.businessName);
-    showToast('Welcome to Arwa Inventory Pro! 🎉', 'success');
+    showToast('Welcome to Arwa 1.0! 🎉', 'success');
   };
 
   const progress = (step / (STEPS.length - 1)) * 100;

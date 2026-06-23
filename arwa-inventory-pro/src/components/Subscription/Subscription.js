@@ -62,7 +62,7 @@ export default function Subscription() {
       <div className="page-header">
         <div className="page-header-left">
           <h1>Subscription & Billing</h1>
-          <p>Manage your Arwa Inventory Pro subscription and AI add-ons</p>
+          <p>Manage your Arwa 1.0 subscription and AI add-ons</p>
         </div>
       </div>
 
