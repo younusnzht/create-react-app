@@ -105,16 +105,30 @@ export function AppProvider({ children }) {
     trialDaysLeft: 0,
     businessType: 'platform_admin',
     enabledModules: [],
+    moduleOverrides: {}, // { '/path': true|false } — explicit per-module on/off
   }));
 
   const getEnabledModules = useCallback((sub = null) => {
     const s = sub || subscription;
     const type = BUSINESS_TYPES[s.businessType] || BUSINESS_TYPES.platform_admin;
-    if (type.modules[0] === 'ALL') return null; // null = show everything
-    // Merge base modules with any custom enabledModules overrides
-    const base = type.modules;
-    const overrides = s.enabledModules || [];
-    return [...new Set([...base, ...overrides])];
+    if (type.modules[0] === 'ALL' && !s.moduleOverrides) return null; // platform_admin with no overrides = show everything
+    // Start from business-type base + any legacy enabledModules additions
+    let base = type.modules[0] === 'ALL'
+      ? ['/', '/pos', '/inventory', '/cash-counter', '/customers', '/suppliers', '/online-orders',
+         '/quotes', '/purchase-orders', '/stock-transfers', '/backorders', '/barcode',
+         '/lot-tracking', '/reports', '/accounting', '/tax', '/payroll', '/cra-audit',
+         '/ai-guardian', '/users', '/settings', '/subscription']
+      : [...type.modules, ...(s.enabledModules || [])];
+    let result = [...new Set(base)];
+    // Apply per-module overrides (admin toggles)
+    const overrides = s.moduleOverrides || {};
+    for (const [path, enabled] of Object.entries(overrides)) {
+      if (enabled && !result.includes(path)) result.push(path);
+      if (!enabled) result = result.filter(p => p !== path);
+    }
+    // If no overrides at all and platform_admin, return null (show everything)
+    if (type.modules[0] === 'ALL' && Object.keys(overrides).length === 0) return null;
+    return result;
   }, [subscription]);
 
   // ─── Canadian tax config ──────────────────────────────────────────────────

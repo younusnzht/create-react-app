@@ -294,69 +294,156 @@ export default function Settings() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Business Type & Module Manager */}
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header">
-            <h3 className="card-title">Business Type & Module Access</h3>
-            <p className="card-subtitle">Set the business type to control which modules are visible to users of this account</p>
-          </div>
-          <div className="card-body">
-            <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label">Business Type</label>
-              <select className="form-control" style={{ maxWidth: 360 }}
-                value={subscription?.businessType || 'platform_admin'}
-                onChange={e => {
-                  const newType = e.target.value;
-                  setSubscription(prev => ({ ...prev, businessType: newType, enabledModules: [] }));
-                  showToast(`Business type set to ${BUSINESS_TYPES[newType]?.label}`, 'success');
-                }}>
-                {Object.entries(BUSINESS_TYPES).map(([key, bt]) => (
-                  <option key={key} value={key}>{bt.emoji} {bt.label}</option>
-                ))}
-              </select>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                This controls which sidebar modules are visible. Add-on modules are shown as locked with an upgrade prompt.
-              </p>
-            </div>
+        {(() => {
+          const ALL_MODULES = [
+            { path: '/', label: 'Dashboard', icon: '🏠' },
+            { path: '/pos', label: 'Point of Sale', icon: '🛒' },
+            { path: '/inventory', label: 'Inventory', icon: '📦' },
+            { path: '/cash-counter', label: 'Cash Counter', icon: '🏦' },
+            { path: '/customers', label: 'Customers', icon: '👥' },
+            { path: '/suppliers', label: 'Suppliers', icon: '🚚' },
+            { path: '/online-orders', label: 'Online Orders', icon: '🌐' },
+            { path: '/quotes', label: 'Quotes', icon: '📋' },
+            { path: '/purchase-orders', label: 'Purchase Orders', icon: '📝' },
+            { path: '/stock-transfers', label: 'Stock Transfers', icon: '↔️' },
+            { path: '/backorders', label: 'Backorders', icon: '⏳' },
+            { path: '/barcode', label: 'Barcode System', icon: '📊' },
+            { path: '/lot-tracking', label: 'Lot & Serial Tracking', icon: '🔍' },
+            { path: '/reports', label: 'Reports', icon: '📈' },
+            { path: '/accounting', label: 'Accounting', icon: '💰' },
+            { path: '/tax', label: 'Canadian Tax', icon: '🍁' },
+            { path: '/payroll', label: 'Payroll / T4', icon: '💵' },
+            { path: '/cra-audit', label: 'CRA Audit Export', icon: '🗂️' },
+            { path: '/users', label: 'User Management', icon: '👤' },
+            { path: '/ai-guardian', label: 'AI Guardian', icon: '🤖' },
+            { path: '/subscription', label: 'Subscription', icon: '💳' },
+            { path: '/settings', label: 'Settings', icon: '⚙️' },
+          ];
 
-            {/* Module overview */}
-            {(() => {
-              const bt = BUSINESS_TYPES[subscription?.businessType || 'platform_admin'];
-              if (!bt || bt.modules[0] === 'ALL') return (
-                <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(79,70,229,0.1)', border: '1px solid rgba(79,70,229,0.3)', fontSize: 13, color: 'var(--primary-light)' }}>
-                  ⚙️ Platform Admin mode — all modules visible
+          const bt = BUSINESS_TYPES[subscription?.businessType || 'platform_admin'];
+          const baseEnabled = bt?.modules[0] === 'ALL'
+            ? ALL_MODULES.map(m => m.path)
+            : [...(bt?.modules || []), ...(subscription?.enabledModules || [])];
+          const overrides = subscription?.moduleOverrides || {};
+
+          const isModuleOn = (path) => {
+            if (overrides[path] === true) return true;
+            if (overrides[path] === false) return false;
+            return baseEnabled.includes(path);
+          };
+
+          const toggleModule = (path) => {
+            const current = isModuleOn(path);
+            const newOverrides = { ...overrides, [path]: !current };
+            setSubscription(prev => ({ ...prev, moduleOverrides: newOverrides }));
+            showToast(`${ALL_MODULES.find(m => m.path === path)?.label} ${!current ? 'enabled' : 'disabled'}`, !current ? 'success' : 'info');
+          };
+
+          const resetToDefaults = () => {
+            setSubscription(prev => ({ ...prev, moduleOverrides: {} }));
+            showToast('Module access reset to business type defaults', 'success');
+          };
+
+          const enabledCount = ALL_MODULES.filter(m => isModuleOn(m.path)).length;
+          const hasOverrides = Object.keys(overrides).length > 0;
+
+          return (
+            <div className="card" style={{ marginBottom: 20 }}>
+              <div className="card-header">
+                <div>
+                  <h3 className="card-title">Business Type & Module Access</h3>
+                  <p className="card-subtitle">Choose a preset then fine-tune individual modules with the toggles below</p>
                 </div>
-              );
-              return (
-                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Included Modules</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {bt.modules.map(p => (
-                        <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                          <span style={{ color: '#10B981', fontWeight: 700 }}>✓</span>
-                          <span>{p === '/' ? 'Dashboard' : p.replace('/', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                        </div>
+              </div>
+              <div className="card-body">
+                {/* Business type preset selector */}
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 24 }}>
+                  <div style={{ flex: 1, minWidth: 240 }}>
+                    <label className="form-label">Business Type Preset</label>
+                    <select className="form-control"
+                      value={subscription?.businessType || 'platform_admin'}
+                      onChange={e => {
+                        const newType = e.target.value;
+                        setSubscription(prev => ({ ...prev, businessType: newType, enabledModules: [], moduleOverrides: {} }));
+                        showToast(`Preset changed to ${BUSINESS_TYPES[newType]?.label} — toggles reset`, 'success');
+                      }}>
+                      {Object.entries(BUSINESS_TYPES).map(([key, bt]) => (
+                        <option key={key} value={key}>{bt.emoji} {bt.label}</option>
                       ))}
-                    </div>
+                    </select>
                   </div>
-                  {bt.addOns.length > 0 && (
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Add-On Modules (locked)</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {bt.addOns.map(p => (
-                          <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                            <span style={{ color: '#F59E0B', fontWeight: 700 }}>🔒</span>
-                            <span style={{ color: 'var(--text-muted)' }}>{p.replace('/', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>{enabledCount}</strong> / {ALL_MODULES.length} modules enabled
+                    </span>
+                    {hasOverrides && (
+                      <button
+                        onClick={resetToDefaults}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                      >
+                        ↺ Reset to Defaults
+                      </button>
+                    )}
+                  </div>
                 </div>
-              );
-            })()}
-          </div>
-        </div>
+
+                {/* Module toggle grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                  {ALL_MODULES.map(mod => {
+                    const on = isModuleOn(mod.path);
+                    const isOverridden = overrides[mod.path] !== undefined;
+                    const isBase = baseEnabled.includes(mod.path);
+                    return (
+                      <div key={mod.path} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '12px 14px', borderRadius: 10,
+                        background: on ? 'rgba(79,70,229,0.07)' : 'var(--bg-tertiary)',
+                        border: `1px solid ${on ? 'rgba(79,70,229,0.25)' : 'var(--border)'}`,
+                        transition: 'all 0.15s',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 16 }}>{mod.icon}</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: on ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                              {mod.label}
+                            </div>
+                            {isOverridden && (
+                              <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 700, marginTop: 1 }}>
+                                {on && !isBase ? '★ Manually enabled' : !on && isBase ? '★ Manually disabled' : ''}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {/* Toggle switch */}
+                        <button
+                          onClick={() => toggleModule(mod.path)}
+                          title={on ? 'Click to disable' : 'Click to enable'}
+                          style={{
+                            width: 44, height: 24, borderRadius: 12, flexShrink: 0,
+                            background: on ? 'var(--primary)' : 'var(--bg-card)',
+                            border: `1px solid ${on ? 'var(--primary)' : 'var(--border)'}`,
+                            cursor: 'pointer', position: 'relative', transition: 'all 0.2s',
+                          }}
+                        >
+                          <div style={{
+                            width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: 2, left: on ? 22 : 2,
+                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                          }} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 14, marginBottom: 0 }}>
+                  Changes take effect immediately. Disabled modules show as locked (ADD-ON) in the sidebar and are blocked at the route level.
+                  Use <strong>Reset to Defaults</strong> to restore the preset's original configuration.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* AI & API Configuration */}
         <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
