@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown, CheckCircle, X } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Plus, Edit2, Trash2, Search, Download, Upload, Package, AlertTriangle, ChevronUp, ChevronDown, CheckCircle, X, Image } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { CATEGORIES } from '../../data/mockData';
 
@@ -20,10 +20,19 @@ function ProductModal({ product, suppliers, onClose, onSave }) {
     name: '', sku: '', barcode: '', category: CATEGORIES[0],
     supplier: 'PharmaCo Ltd', purchasePrice: '', salePrice: '',
     stock: '', minStock: '', expiry: '', warehouse: 'Main Store',
-    tax: 0, status: 'active'
+    tax: 0, status: 'active', image: null
   });
+  const imgRef = useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => set('image', ev.target.result);
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -113,6 +122,28 @@ function ProductModal({ product, suppliers, onClose, onSave }) {
             <div className="form-group">
               <label className="form-label">Expiry Date</label>
               <input className="form-control" type="date" value={form.expiry || ''} onChange={e => set('expiry', e.target.value)} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Product Image</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {form.image ? (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <img src={form.image} alt="product" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+                  <button type="button" onClick={() => set('image', null)} style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: 'var(--danger)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>×</button>
+                </div>
+              ) : (
+                <div style={{ width: 72, height: 72, borderRadius: 8, border: '2px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'var(--bg-tertiary)' }}>
+                  <Image size={24} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              )}
+              <div>
+                <input ref={imgRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => imgRef.current.click()}>
+                  <Upload size={12} /> {form.image ? 'Change Image' : 'Upload Image'}
+                </button>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>JPG, PNG, WEBP — shown in POS for restaurants</p>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>

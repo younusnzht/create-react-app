@@ -20,7 +20,8 @@ const getCurrencySymbol = (code) => {
 };
 
 export default function POS() {
-  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders, calcOrderTax, addAuditEntry, taxConfig, customers, updateCustomer } = useApp();
+  const { products, updateProduct, addOrder, showToast, currentUser, currency, orders, calcOrderTax, addAuditEntry, taxConfig, customers, updateCustomer, subscription } = useApp();
+  const isRestaurant = subscription?.businessType === 'restaurant';
 
   const [activeTab, setActiveTab] = useState('pos'); // 'pos' | 'return'
   const [cart, setCart] = useState([]);
@@ -445,28 +446,49 @@ export default function POS() {
             </div>
 
             {/* Product Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, overflowY: 'auto', flex: 1, paddingRight: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isRestaurant ? 'repeat(auto-fill, minmax(180px, 1fr))' : 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, overflowY: 'auto', flex: 1, paddingRight: 4 }}>
               {visibleProducts.map(p => (
                 <div
                   key={p.id}
                   onClick={() => addToCart(p)}
                   style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border)',
-                    borderRadius: 10, padding: 14, cursor: 'pointer',
-                    transition: 'all 0.15s',
+                    borderRadius: 10, padding: isRestaurant ? 0 : 14, cursor: 'pointer',
+                    transition: 'all 0.15s', overflow: 'hidden',
                     opacity: p.stock === 0 ? 0.5 : 1,
                   }}
                   onMouseEnter={e => { if (p.stock > 0) { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}
                 >
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-                    <ShoppingCart size={18} style={{ color: 'var(--primary-light)' }} />
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, marginBottom: 6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--success)' }}>{sym}{p.salePrice.toFixed(2)}</div>
-                  <div style={{ fontSize: 11, color: p.stock <= p.minStock ? 'var(--warning)' : 'var(--text-muted)', marginTop: 2 }}>
-                    Stock: {p.stock}
-                  </div>
+                  {isRestaurant ? (
+                    <>
+                      <div style={{ width: '100%', height: 110, background: p.image ? 'transparent' : 'rgba(79,70,229,0.08)', position: 'relative', overflow: 'hidden' }}>
+                        {p.image
+                          ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🍽️</div>
+                        }
+                        {p.stock === 0 && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 12 }}>SOLD OUT</div>}
+                      </div>
+                      <div style={{ padding: '10px 12px' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, marginBottom: 4, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--success)' }}>{sym}{p.salePrice.toFixed(2)}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ width: 40, height: 40, borderRadius: 8, background: p.image ? 'transparent' : 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden', flexShrink: 0 }}>
+                        {p.image
+                          ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
+                          : <ShoppingCart size={18} style={{ color: 'var(--primary-light)' }} />
+                        }
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3, marginBottom: 6, color: 'var(--text-primary)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{p.name}</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--success)' }}>{sym}{p.salePrice.toFixed(2)}</div>
+                      <div style={{ fontSize: 11, color: p.stock <= p.minStock ? 'var(--warning)' : 'var(--text-muted)', marginTop: 2 }}>
+                        Stock: {p.stock}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

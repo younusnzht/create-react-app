@@ -168,6 +168,12 @@ export function AppProvider({ children }) {
     document.documentElement.style.setProperty('--font-family', FONT_STACK[fontFamily] || FONT_STACK['Inter']);
     document.documentElement.style.setProperty('--font-size-base', fontSize + 'px');
   }, [fontFamily, fontSize]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply theme to <html> so :root CSS variables inherit correctly into body/html
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-color-theme', colorTheme);
+  }, [theme, colorTheme]);
   useEffect(() => localStorage.setItem('arwa_products',      JSON.stringify(products)),      [products]);
   useEffect(() => localStorage.setItem('arwa_users',         JSON.stringify(users)),         [users]);
   useEffect(() => localStorage.setItem('arwa_orders',        JSON.stringify(orders)),        [orders]);
