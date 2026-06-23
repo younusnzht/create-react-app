@@ -5,7 +5,6 @@ import {
   CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { BUSINESS_TYPES } from '../../data/mockData';
 
 const NAV_ITEMS = [
   { section: 'Main' },
@@ -36,21 +35,16 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, subscription, getEnabledModules } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, getEnabledModules } = useApp();
 
   const criticalIssues = aiIssues.filter(i => i.severity === 'critical' && i.status === 'pending').length;
   const newOrderCount = onlineOrders?.filter(o => o.status === 'new').length || 0;
 
   const enabledModules = getEnabledModules();
-  const businessType = BUSINESS_TYPES[subscription?.businessType] || BUSINESS_TYPES.platform_admin;
-  const addOnPaths = businessType.addOns || [];
 
   const isModuleEnabled = (path) => {
     if (!enabledModules) return true; // platform_admin sees all
     return enabledModules.includes(path);
-  };
-  const isModuleAddOn = (path) => {
-    return !isModuleEnabled(path) && addOnPaths.includes(path);
   };
 
   return (
@@ -79,20 +73,8 @@ export default function Sidebar() {
           const Icon = item.icon;
           const isAI = item.path === '/ai-guardian';
           const enabled = isModuleEnabled(item.path);
-          const isAddOn = isModuleAddOn(item.path);
-          // Hide modules that are neither enabled nor add-ons
-          if (!enabled && !isAddOn) return null;
+          if (!enabled) return null;
 
-          if (isAddOn) {
-            return (
-              <div key={item.path} className="nav-item" style={{ opacity: 0.45, cursor: 'not-allowed', position: 'relative' }}
-                title={`${item.label} — upgrade to unlock`}>
-                <Icon className="nav-icon" size={18} style={{ color: 'var(--text-muted)' }} />
-                <span className="nav-label" style={{ color: 'var(--text-muted)' }}>{item.label}</span>
-                <span className="nav-label" style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontWeight: 700, marginLeft: 'auto' }}>ADD-ON</span>
-              </div>
-            );
-          }
           return (
             <NavLink
               key={item.path}
