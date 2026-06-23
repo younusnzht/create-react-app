@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown, LogOut
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, getEnabledModules, isSuperAdmin } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, currentUser, aiIssues, onlineOrders, getEnabledModules, isSuperAdmin, logout } = useApp();
 
   const criticalIssues = aiIssues.filter(i => i.severity === 'critical' && i.status === 'pending').length;
   const newOrderCount = onlineOrders?.filter(o => o.status === 'new').length || 0;
@@ -45,12 +45,10 @@ export default function Sidebar() {
 
   const isModuleEnabled = (path) => {
     if (!enabledModules) {
-      // platform_admin sees all, but still respect staff allowedModules
       if (isStaffUser && currentUser.allowedModules) return currentUser.allowedModules.includes(path);
       return true;
     }
     if (!enabledModules.includes(path)) return false;
-    // Staff users: also filter by their personal allowedModules
     if (isStaffUser && currentUser.allowedModules) return currentUser.allowedModules.includes(path);
     return true;
   };
@@ -58,17 +56,25 @@ export default function Sidebar() {
   return (
     <div className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-logo">
-        <div className="logo-icon">A</div>
+        {/* Logo icon — hidden when collapsed to give the toggle button room */}
+        <div className="logo-icon" style={{ flexShrink: 0, transition: 'opacity 0.2s, width 0.2s', opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 32, overflow: 'hidden' }}>A</div>
         <div className="logo-text">
           <h2>Arwa 1.0</h2>
           <p>Enterprise Platform</p>
         </div>
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="icon-btn"
-          style={{ marginLeft: 'auto', flexShrink: 0, border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            marginLeft: 'auto', flexShrink: 0, border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.06)', color: 'var(--sidebar-text)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 6, width: 28, height: 28, transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
         >
-          {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
@@ -118,7 +124,7 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="user-card">
-          <div className="user-avatar">
+          <div className="user-avatar" style={{ flexShrink: 0 }}>
             {currentUser.name.charAt(0)}
           </div>
           <div className="user-info">
@@ -129,6 +135,17 @@ export default function Sidebar() {
             </p>
           </div>
         </div>
+        <button
+          onClick={logout}
+          className="nav-item"
+          title="Sign out"
+          style={{ width: '100%', marginTop: 4, color: '#EF4444', background: 'rgba(239,68,68,0.08)', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+        >
+          <LogOut className="nav-icon" size={16} style={{ color: '#EF4444' }} />
+          <span className="nav-label" style={{ color: '#EF4444', fontWeight: 600 }}>Sign Out</span>
+        </button>
       </div>
     </div>
   );

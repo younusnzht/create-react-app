@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Sun, Moon, X, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Search, Bell, Sun, Moon, X, AlertTriangle, Info, CheckCircle, LogOut, User, Settings } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const PAGE_TITLES = {
   '/': 'Dashboard',
@@ -16,6 +16,17 @@ const PAGE_TITLES = {
   '/settings': 'Settings',
   '/online-orders': 'Online Orders',
   '/customers': 'Customer Management',
+  '/cash-counter': 'Cash Counter',
+  '/tax': 'Canadian Tax',
+  '/lot-tracking': 'Lot & Serial Tracking',
+  '/purchase-orders': 'Purchase Orders',
+  '/stock-transfers': 'Stock Transfers',
+  '/backorders': 'Backorders',
+  '/payroll': 'Payroll / T4',
+  '/accounting': 'Accounting',
+  '/cra-audit': 'CRA Audit Export',
+  '/quotes': 'Quotes',
+  '/master': 'Master Control Panel',
 };
 
 const NotifIcon = ({ type }) => {
@@ -29,22 +40,29 @@ const NotifIcon = ({ type }) => {
 };
 
 export default function Header({ searchQuery, setSearchQuery }) {
-  const { theme, toggleTheme, notifications, markNotificationRead, unreadCount } = useApp();
+  const { theme, toggleTheme, notifications, markNotificationRead, unreadCount, currentUser, logout } = useApp();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const notifRef = useRef(null);
+  const userRef = useRef(null);
 
   const title = PAGE_TITLES[location.pathname] || 'Arwa 1.0';
 
   useEffect(() => {
     const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) {
-        setShowNotifs(false);
-      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifs(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUserMenu(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+  };
 
   return (
     <header className="header">
@@ -70,8 +88,9 @@ export default function Header({ searchQuery, setSearchQuery }) {
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
+        {/* Notifications */}
         <div ref={notifRef} style={{ position: 'relative' }}>
-          <button className="icon-btn" onClick={() => setShowNotifs(!showNotifs)}>
+          <button className="icon-btn" onClick={() => { setShowNotifs(!showNotifs); setShowUserMenu(false); }}>
             <Bell size={16} />
             {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
           </button>
@@ -118,6 +137,79 @@ export default function Header({ searchQuery, setSearchQuery }) {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User menu */}
+        <div ref={userRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifs(false); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 5px',
+              background: showUserMenu ? 'var(--bg-hover)' : 'transparent',
+              border: '1px solid var(--border)', borderRadius: 20,
+              cursor: 'pointer', transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={e => { if (!showUserMenu) e.currentTarget.style.background = 'transparent'; }}
+          >
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 800, color: '#fff', flexShrink: 0,
+            }}>
+              {currentUser?.name?.charAt(0) || 'U'}
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{currentUser?.name}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{currentUser?.role}</div>
+            </div>
+          </button>
+
+          {showUserMenu && (
+            <div style={{
+              position: 'absolute', top: '44px', right: 0, width: '220px',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', zIndex: 1000,
+              overflow: 'hidden', animation: 'slideUp 0.15s ease',
+            }}>
+              {/* User info header */}
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{currentUser?.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{currentUser?.email}</div>
+                <div style={{ fontSize: 10, color: 'var(--primary-light)', fontWeight: 600, textTransform: 'capitalize', marginTop: 4 }}>{currentUser?.role}</div>
+              </div>
+
+              {/* Menu items */}
+              <div style={{ padding: '6px 0' }}>
+                <button
+                  onClick={() => { setShowUserMenu(false); navigate('/settings'); }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, textAlign: 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <Settings size={14} /> Settings
+                </button>
+                <button
+                  onClick={() => { setShowUserMenu(false); navigate('/users'); }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, textAlign: 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <User size={14} /> My Account
+                </button>
+                <div style={{ borderTop: '1px solid var(--border)', margin: '6px 0' }} />
+                <button
+                  onClick={handleLogout}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 13, fontWeight: 600, textAlign: 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
               </div>
             </div>
           )}
