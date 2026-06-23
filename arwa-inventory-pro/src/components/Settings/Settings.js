@@ -218,7 +218,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
@@ -555,7 +555,7 @@ export default function Settings() {
           <SettingRow label="Dark Mode" desc="Toggle between dark and light interface theme">
             <Toggle value={theme === 'dark'} onChange={toggleTheme} />
           </SettingRow>
-          <div style={{ padding: '16px 0' }}>
+          <div style={{ padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Color Theme</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Choose the accent color palette for the entire application</div>
             <div className="theme-swatches">
@@ -570,6 +570,52 @@ export default function Settings() {
                     style={{ background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]})` }}
                   />
                   <span className="swatch-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Font Family */}
+          <div style={{ padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Font Family</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Interface font used throughout the application</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'IBM Plex Sans', 'System'].map(f => (
+                <button key={f} onClick={() => { setFontFamily(f); showToast(`Font changed to ${f}`, 'info'); }} style={{
+                  padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s',
+                  fontFamily: f === 'System' ? 'system-ui' : `'${f}', sans-serif`,
+                  fontWeight: fontFamily === f ? 700 : 500,
+                  background: fontFamily === f ? 'var(--primary)' : 'var(--bg-tertiary)',
+                  color: fontFamily === f ? '#fff' : 'var(--text-secondary)',
+                  border: fontFamily === f ? '1px solid var(--primary)' : '1px solid var(--border)',
+                }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Font Size */}
+          <div style={{ padding: '16px 0' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Font Size</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>Base text size — affects all UI elements proportionally</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { label: 'Compact',     size: '12' },
+                { label: 'Normal',      size: '14' },
+                { label: 'Comfortable', size: '15' },
+                { label: 'Large',       size: '16' },
+              ].map(opt => (
+                <button key={opt.size} onClick={() => { setFontSize(opt.size); showToast(`Font size set to ${opt.label}`, 'info'); }} style={{
+                  padding: '8px 18px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
+                  fontSize: parseInt(opt.size, 10),
+                  fontWeight: fontSize === opt.size ? 700 : 500,
+                  background: fontSize === opt.size ? 'var(--primary)' : 'var(--bg-tertiary)',
+                  color: fontSize === opt.size ? '#fff' : 'var(--text-secondary)',
+                  border: fontSize === opt.size ? '1px solid var(--primary)' : '1px solid var(--border)',
+                }}>
+                  {opt.label}
+                  <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 6 }}>{opt.size}px</span>
                 </button>
               ))}
             </div>

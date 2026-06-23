@@ -33,6 +33,8 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState(() => loadLS('arwa_theme', 'dark'));
   const [colorTheme, setColorTheme] = useState(() => loadLS('arwa_colorTheme', 'indigo'));
   const [currency, setCurrency] = useState(() => loadLS('arwa_currency', 'USD'));
+  const [fontFamily, setFontFamily] = useState(() => loadLS('arwa_fontFamily', 'Inter'));
+  const [fontSize, setFontSize] = useState(() => loadLS('arwa_fontSize', '14'));
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -150,6 +152,22 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_theme',         JSON.stringify(theme)),         [theme]);
   useEffect(() => localStorage.setItem('arwa_colorTheme',    JSON.stringify(colorTheme)),    [colorTheme]);
   useEffect(() => localStorage.setItem('arwa_currency',      JSON.stringify(currency)),      [currency]);
+  useEffect(() => localStorage.setItem('arwa_fontFamily',    JSON.stringify(fontFamily)),    [fontFamily]);
+  useEffect(() => localStorage.setItem('arwa_fontSize',      JSON.stringify(fontSize)),      [fontSize]);
+
+  const FONT_STACK = {
+    'Inter':         "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    'Roboto':        "'Roboto', -apple-system, sans-serif",
+    'Open Sans':     "'Open Sans', -apple-system, sans-serif",
+    'Lato':          "'Lato', -apple-system, sans-serif",
+    'Poppins':       "'Poppins', -apple-system, sans-serif",
+    'IBM Plex Sans': "'IBM Plex Sans', -apple-system, sans-serif",
+    'System':        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  };
+  useEffect(() => {
+    document.documentElement.style.setProperty('--font-family', FONT_STACK[fontFamily] || FONT_STACK['Inter']);
+    document.documentElement.style.setProperty('--font-size-base', fontSize + 'px');
+  }, [fontFamily, fontSize]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => localStorage.setItem('arwa_products',      JSON.stringify(products)),      [products]);
   useEffect(() => localStorage.setItem('arwa_users',         JSON.stringify(users)),         [users]);
   useEffect(() => localStorage.setItem('arwa_orders',        JSON.stringify(orders)),        [orders]);
@@ -672,6 +690,7 @@ export function AppProvider({ children }) {
 
   const value = useMemo(() => ({
     theme, toggleTheme, colorTheme, setColorTheme,
+    fontFamily, setFontFamily, fontSize, setFontSize,
     currency, setCurrency,
     sidebarCollapsed, setSidebarCollapsed,
     toast, showToast,
@@ -707,7 +726,8 @@ export function AppProvider({ children }) {
     exportAllData, importAllData,
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
   }), [
-    theme, toggleTheme, colorTheme, setColorTheme, currency, sidebarCollapsed, toast, showToast,
+    theme, toggleTheme, colorTheme, setColorTheme, fontFamily, fontSize,
+    currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
     products, addProduct, updateProduct, deleteProduct,
     suppliers, addSupplier, updateSupplier,
