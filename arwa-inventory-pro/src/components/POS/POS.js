@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Search, Plus, Minus, Trash2,
   ShoppingCart, CheckCircle, Printer, Tag, User, RotateCcw, Clock, Package,
@@ -92,6 +92,13 @@ export default function POS() {
   const availablePoints = selectedCustomer ? (selectedCustomer.loyaltyPoints || 0) : 0;
   const pointsDiscount = pointsToRedeem / 100;
   const total = Math.max(0, taxedTotal - pointsDiscount);
+
+  // Auto-fill payment amount when cart total changes (single-payment mode only)
+  useEffect(() => {
+    if (payments.length === 1) {
+      setPayments([{ method: payments[0].method, amount: total > 0 ? total.toFixed(2) : '' }]);
+    }
+  }, [total]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Split payments
   const totalPaid = payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
