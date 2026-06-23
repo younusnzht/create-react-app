@@ -682,8 +682,20 @@ export function AppProvider({ children }) {
   // ─── auth ─────────────────────────────────────────────────────────────────
 
   const login = useCallback((email, password) => {
-    const found = users.find(u => u.email === email && u.password === password)
+    // Check users array first, then fall back to clientConfigs (handles sync edge cases)
+    let found = users.find(u => u.email === email && u.password === password)
       || USERS.find(u => u.email === email && u.password === password);
+    if (!found) {
+      const cfg = clientConfigs.find(c => c.email === email && c.loginPassword === password && c.status !== 'suspended' && c.status !== 'cancelled');
+      if (cfg) {
+        found = { id: cfg.id, name: cfg.clientName, email: cfg.email, role: 'client', status: 'active', branch: 'Main Store', permissions: [] };
+        // Sync the user into the users array so future logins use the fast path
+        setUsers(prev => {
+          if (prev.find(u => u.email === email)) return prev.map(u => u.email === email ? { ...u, password } : u);
+          return [...prev, { ...found, password }];
+        });
+      }
+    }
     if (!found) return false;
     setCurrentUser(found);
     setIsAuthenticated(true);
@@ -703,7 +715,7 @@ export function AppProvider({ children }) {
       }));
     }
     return true;
-  }, [users, clientConfigs]);
+  }, [users, clientConfigs, setUsers]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);

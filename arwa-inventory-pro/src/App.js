@@ -33,14 +33,14 @@ import ModuleGuard from './components/Layout/ModuleGuard';
 import MasterPanel from './components/Master/MasterPanel';
 
 function AppLayout() {
-  const { theme, colorTheme, isAuthenticated, onboarded } = useApp();
+  const { theme, colorTheme, isAuthenticated, onboarded, isSuperAdmin } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <div data-theme={theme} data-color-theme={colorTheme} className="app-layout">
-      {!onboarded && <OnboardingWizard />}
+      {!onboarded && !isSuperAdmin && <OnboardingWizard />}
       <Sidebar />
       <div className="main-content">
         <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
