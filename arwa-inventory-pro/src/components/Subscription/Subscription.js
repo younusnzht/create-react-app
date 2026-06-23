@@ -1,15 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, X, Zap, Shield, Crown, CreditCard,
-  Sparkles, ArrowRight, Check, AlertTriangle
+  Sparkles, ArrowRight, Check, AlertTriangle, Package
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { SUBSCRIPTION_PLANS, SELF_HEALING_ADDON, ORDER_ADDON_PRICE } from '../../data/mockData';
+import { SUBSCRIPTION_PLANS, SELF_HEALING_ADDON, ORDER_ADDON_PRICE, BUSINESS_TYPES } from '../../data/mockData';
+
+const MODULE_INFO = {
+  '/pos':             { label: 'Point of Sale',           emoji: '🛒', desc: 'Full POS terminal with barcode scanning, receipts and split payments', price: '$19/mo' },
+  '/cash-counter':    { label: 'Cash Counter',            emoji: '🏦', desc: 'Till management, Z-reads, float tracking and shift reconciliation', price: '$9/mo' },
+  '/online-orders':   { label: 'Online Orders',           emoji: '🌐', desc: 'Receive and manage orders from your ecommerce store in real time', price: '$19/mo' },
+  '/quotes':          { label: 'Quotes & B2B Pricing',    emoji: '📋', desc: 'Create quotes, apply customer contract pricing, convert to orders', price: '$14/mo' },
+  '/purchase-orders': { label: 'Purchase Orders',         emoji: '📝', desc: 'Full PO workflow with supplier confirmation and receiving', price: '$14/mo' },
+  '/stock-transfers': { label: 'Stock Transfers',         emoji: '↔️', desc: 'Move inventory between locations and warehouses', price: '$9/mo' },
+  '/backorders':      { label: 'Backorders',              emoji: '⏳', desc: 'Track and fulfil backorders automatically when stock arrives', price: '$9/mo' },
+  '/barcode':         { label: 'Barcode System',          emoji: '📊', desc: 'Generate, print and scan barcodes with bulk label printing', price: '$9/mo' },
+  '/lot-tracking':    { label: 'Lot & Serial Tracking',   emoji: '🔍', desc: 'Track products by batch, lot number or individual serial number', price: '$19/mo' },
+  '/payroll':         { label: 'Payroll / T4',            emoji: '💵', desc: 'Canadian payroll processing with T4 slips and CRA remittances', price: '$24/mo' },
+  '/tax':             { label: 'Canadian Tax Engine',     emoji: '🍁', desc: 'GST/HST/PST/QST auto-calculation for all 13 provinces and territories', price: 'Free' },
+  '/cra-audit':       { label: 'CRA Audit Export',        emoji: '🗂️', desc: 'Generate CRA-ready audit files, SAF-T and financial summaries', price: '$14/mo' },
+  '/accounting':      { label: 'Accounting Module',       emoji: '💰', desc: 'P&L, balance sheet, AR/AP aging, journal entries', price: 'Included' },
+  '/reports':         { label: 'Advanced Reports',        emoji: '📈', desc: 'Custom report builder with scheduled email delivery', price: 'Included' },
+};
 
 const PLAN_ICONS = { basic: Shield, intermediate: Zap, super: Crown };
 
 export default function Subscription() {
-  const { subscription, setSubscription, showToast, orders } = useApp();
+  const { subscription, setSubscription, showToast, orders, getEnabledModules } = useApp();
   const [billing, setBilling] = useState(subscription.billing);
   const [showUpgradeModal, setShowUpgradeModal] = useState(null);
   const [showSelfHealModal, setShowSelfHealModal] = useState(false);
@@ -252,6 +269,98 @@ export default function Subscription() {
           </div>
         </div>
       </div>
+
+      {/* Module Add-Ons */}
+      {(() => {
+        const bt = BUSINESS_TYPES[subscription?.businessType || 'platform_admin'];
+        const addOnPaths = bt?.addOns || [];
+        if (addOnPaths.length === 0) return null;
+
+        const overrides = subscription?.moduleOverrides || {};
+        const enabledModules = getEnabledModules() || [];
+
+        const isEnabled = (path) => {
+          if (overrides[path] === true) return true;
+          if (overrides[path] === false) return false;
+          return enabledModules.includes(path);
+        };
+
+        const toggleAddOn = (path, label) => {
+          const current = isEnabled(path);
+          setSubscription(prev => ({
+            ...prev,
+            moduleOverrides: { ...(prev.moduleOverrides || {}), [path]: !current },
+          }));
+          showToast(`${label} ${!current ? 'enabled' : 'disabled'}`, !current ? 'success' : 'info');
+        };
+
+        return (
+          <div className="card" style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(91,95,207,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Package size={18} style={{ color: 'var(--primary-light)' }} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 800 }}>Module Add-Ons</h3>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                  Optional modules available for your <strong style={{ color: 'var(--text-secondary)' }}>{bt?.emoji} {bt?.label}</strong> setup — enable individually as needed
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12, marginTop: 16 }}>
+              {addOnPaths.map(path => {
+                const info = MODULE_INFO[path];
+                if (!info) return null;
+                const active = isEnabled(path);
+                return (
+                  <div key={path} style={{
+                    padding: '14px 16px', borderRadius: 10,
+                    background: active ? 'rgba(16,185,129,0.06)' : 'var(--bg-tertiary)',
+                    border: `1px solid ${active ? 'rgba(16,185,129,0.25)' : 'var(--border)'}`,
+                    display: 'flex', alignItems: 'flex-start', gap: 12, transition: 'all 0.15s',
+                  }}>
+                    <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{info.emoji}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{info.label}</span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10,
+                          background: active ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                          color: active ? '#10B981' : '#D97706',
+                        }}>
+                          {active ? 'ENABLED' : 'ADD-ON'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>{info.desc}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: info.price === 'Free' || info.price === 'Included' ? 'var(--success)' : 'var(--primary-light)' }}>
+                          {info.price}
+                        </span>
+                        <button
+                          onClick={() => toggleAddOn(path, info.label)}
+                          style={{
+                            padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700,
+                            cursor: 'pointer', border: 'none', transition: 'all 0.15s',
+                            background: active ? 'rgba(239,68,68,0.12)' : 'var(--primary)',
+                            color: active ? '#EF4444' : 'white',
+                          }}
+                        >
+                          {active ? 'Disable' : 'Enable'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 14 }}>
+              Enabled add-ons appear immediately in the sidebar and are accessible via direct URL. Pricing shown is indicative — actual billing depends on your plan tier.
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Billing Info */}
       <div className="grid-2">

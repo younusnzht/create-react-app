@@ -306,7 +306,6 @@ export function AppProvider({ children }) {
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
-    setTimeout(() => setToast(null), 3500);
   }, []);
 
   const toggleTheme = useCallback(() => {
