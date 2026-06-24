@@ -352,14 +352,18 @@ export default function Settings() {
               <div className="card-header">
                 <div>
                   <h3 className="card-title">Business Type & Module Access</h3>
-                  <p className="card-subtitle">Choose a preset then fine-tune individual modules with the toggles below</p>
+                  <p className="card-subtitle">
+                    {isSuperAdmin
+                      ? 'Choose a preset then fine-tune individual modules with the toggles below'
+                      : 'Modules enabled for your account by the platform administrator'}
+                  </p>
                 </div>
               </div>
               <div className="card-body">
                 {/* Business type preset selector */}
                 <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 24 }}>
                   <div style={{ flex: 1, minWidth: 240 }}>
-                    <label className="form-label">Business Type Preset</label>
+                    <label className="form-label">Business Type</label>
                     {isSuperAdmin ? (
                       <select className="form-control"
                         value={subscription?.businessType || 'platform_admin'}
@@ -386,7 +390,7 @@ export default function Settings() {
                     <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                       <strong style={{ color: 'var(--text-primary)' }}>{enabledCount}</strong> / {ALL_MODULES.length} modules enabled
                     </span>
-                    {hasOverrides && (
+                    {isSuperAdmin && hasOverrides && (
                       <button
                         onClick={resetToDefaults}
                         style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
@@ -397,7 +401,17 @@ export default function Settings() {
                   </div>
                 </div>
 
-                {/* Module toggle grid */}
+                {/* Read-only notice for non-master users */}
+                {!isSuperAdmin && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', marginBottom: 16 }}>
+                    <Lock size={14} style={{ color: '#D97706', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: '#D97706', fontWeight: 600 }}>
+                      Module access is controlled by the Arwa platform administrator. Contact support to request changes.
+                    </span>
+                  </div>
+                )}
+
+                {/* Module grid — interactive for super admin, read-only for others */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
                   {ALL_MODULES.map(mod => {
                     const on = isModuleOn(mod.path);
@@ -410,6 +424,7 @@ export default function Settings() {
                         background: on ? 'rgba(79,70,229,0.07)' : 'var(--bg-tertiary)',
                         border: `1px solid ${on ? 'rgba(79,70,229,0.25)' : 'var(--border)'}`,
                         transition: 'all 0.15s',
+                        opacity: !isSuperAdmin && !on ? 0.5 : 1,
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ fontSize: 16 }}>{mod.icon}</span>
@@ -417,22 +432,28 @@ export default function Settings() {
                             <div style={{ fontSize: 13, fontWeight: 600, color: on ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                               {mod.label}
                             </div>
-                            {isOverridden && (
+                            {isSuperAdmin && isOverridden && (
                               <div style={{ fontSize: 10, color: '#F59E0B', fontWeight: 700, marginTop: 1 }}>
                                 {on && !isBase ? '★ Manually enabled' : !on && isBase ? '★ Manually disabled' : ''}
                               </div>
                             )}
+                            {!isSuperAdmin && !on && (
+                              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <Lock size={9} /> Not enabled for your account
+                              </div>
+                            )}
                           </div>
                         </div>
-                        {/* Toggle switch */}
+                        {/* Toggle — clickable only for super admin */}
                         <button
-                          onClick={() => toggleModule(mod.path)}
-                          title={on ? 'Click to disable' : 'Click to enable'}
+                          onClick={isSuperAdmin ? () => toggleModule(mod.path) : undefined}
+                          title={isSuperAdmin ? (on ? 'Click to disable' : 'Click to enable') : 'Managed by platform administrator'}
                           style={{
                             width: 44, height: 24, borderRadius: 12, flexShrink: 0,
                             background: on ? 'var(--primary)' : 'var(--bg-card)',
                             border: `1px solid ${on ? 'var(--primary)' : 'var(--border)'}`,
-                            cursor: 'pointer', position: 'relative', transition: 'all 0.2s',
+                            cursor: isSuperAdmin ? 'pointer' : 'not-allowed',
+                            position: 'relative', transition: 'all 0.2s',
                           }}
                         >
                           <div style={{
@@ -447,8 +468,9 @@ export default function Settings() {
                 </div>
 
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 14, marginBottom: 0 }}>
-                  Changes take effect immediately. Disabled modules show as locked (ADD-ON) in the sidebar and are blocked at the route level.
-                  Use <strong>Reset to Defaults</strong> to restore the preset's original configuration.
+                  {isSuperAdmin
+                    ? <>Changes take effect immediately. Use <strong>Reset to Defaults</strong> to restore the preset's original configuration.</>
+                    : 'Module access is assigned by your platform administrator and cannot be changed here.'}
                 </p>
               </div>
             </div>
