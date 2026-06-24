@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS, BUSINESS_TYPES } from '../data/mockData';
+import { getBusinessDefaults } from '../data/businessData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
 import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
@@ -707,12 +708,27 @@ export function AppProvider({ children }) {
       c.email === email || (c.domain && emailDomain && c.domain.toLowerCase() === emailDomain.toLowerCase())
     );
     if (clientCfg && clientCfg.status === 'active') {
+      const newBusinessType = clientCfg.businessType || 'general_retail';
       setSubscription(prev => ({
         ...prev,
-        businessType: clientCfg.businessType || prev.businessType,
+        businessType: newBusinessType,
         plan: clientCfg.plan || prev.plan,
         moduleOverrides: clientCfg.moduleOverrides || {},
       }));
+      // Seed business-type-specific data on first login (or if business type changed)
+      const initializedFor = localStorage.getItem('arwa_dataInitializedFor');
+      if (initializedFor !== newBusinessType) {
+        const defaults = getBusinessDefaults(newBusinessType);
+        if (defaults) {
+          setProducts(defaults.products);
+          setSuppliers(defaults.suppliers);
+          setCustomers(defaults.customers);
+          setOrders(defaults.orders);
+          setNotifications(defaults.notifications);
+          setStockMovements(defaults.stockMovements);
+          localStorage.setItem('arwa_dataInitializedFor', newBusinessType);
+        }
+      }
     }
     return true;
   }, [users, clientConfigs, setUsers]);
