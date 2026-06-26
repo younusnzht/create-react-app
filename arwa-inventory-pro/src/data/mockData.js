@@ -313,13 +313,13 @@ export const BUSINESS_TYPES = {
   b2b_wholesale: {
     label: 'B2B Wholesaler',
     emoji: '🏭',
-    modules: ['/', '/inventory', '/customers', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
+    modules: ['/', '/inventory', '/customers', '/sales-orders', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/settings', '/subscription', '/ai-guardian'],
     addOns: ['/pos', '/payroll', '/online-orders', '/lot-tracking', '/cash-counter'],
   },
   distributor: {
     label: 'Distributor / Logistics',
     emoji: '🚚',
-    modules: ['/', '/inventory', '/customers', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/payroll', '/settings', '/subscription', '/ai-guardian'],
+    modules: ['/', '/inventory', '/customers', '/sales-orders', '/quotes', '/purchase-orders', '/suppliers', '/stock-transfers', '/backorders', '/barcode', '/reports', '/accounting', '/tax', '/payroll', '/settings', '/subscription', '/ai-guardian'],
     addOns: ['/pos', '/online-orders', '/lot-tracking', '/cash-counter'],
   },
   general_retail: {

@@ -26,6 +26,7 @@ const PAGE_TITLES = {
   '/accounting': 'Accounting',
   '/cra-audit': 'CRA Audit Export',
   '/quotes': 'Quotes',
+  '/sales-orders': 'Sales Orders',
   '/master': 'Master Control Panel',
 };
 

@@ -78,6 +78,7 @@ export function AppProvider({ children }) {
   const [expenses, setExpenses] = useState(() => loadLS('arwa_expenses', []));
   const [chartOfAccounts, setChartOfAccounts] = useState(() => loadLS('arwa_chartOfAccounts', null));
   const [quotes, setQuotes] = useState(() => loadLS('arwa_quotes', []));
+  const [salesOrders, setSalesOrders] = useState(() => loadLS('arwa_salesOrders', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [tillSessions, setTillSessions] = useState(() => loadLS('arwa_till_sessions', []));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
@@ -202,6 +203,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_customerInvoices', JSON.stringify(customerInvoices)), [customerInvoices]);
   useEffect(() => localStorage.setItem('arwa_expenses',         JSON.stringify(expenses)),         [expenses]);
   useEffect(() => localStorage.setItem('arwa_quotes',           JSON.stringify(quotes)),           [quotes]);
+  useEffect(() => localStorage.setItem('arwa_salesOrders',      JSON.stringify(salesOrders)),      [salesOrders]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -225,8 +227,9 @@ export function AppProvider({ children }) {
     dbSet('arwa_auditLog',       auditLog);
     dbSet('arwa_onlineOrders',   onlineOrders);
     dbSet('arwa_quotes',         quotes);
+    dbSet('arwa_salesOrders',    salesOrders);
   }, [products, orders, customers, suppliers, users, purchaseOrders, stockTransfers,
-      backorders, payrollRecords, customerInvoices, expenses, stockMovements, auditLog, onlineOrders, quotes]);
+      backorders, payrollRecords, customerInvoices, expenses, stockMovements, auditLog, onlineOrders, quotes, salesOrders]);
 
   // ── On startup: restore from IndexedDB if localStorage was cleared ────────
   useEffect(() => {
@@ -254,6 +257,7 @@ export function AppProvider({ children }) {
       await restoreKey('arwa_stockMovements',  setStockMovements);
       await restoreKey('arwa_onlineOrders',    setOnlineOrders);
       await restoreKey('arwa_quotes',          setQuotes);
+      await restoreKey('arwa_salesOrders',     setSalesOrders);
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -528,6 +532,10 @@ export function AppProvider({ children }) {
   const addOrder            = useCallback((o) => { setOrders(prev => [{ ...o, id: o.id || `ORD-${Date.now()}`, date: o.date || new Date().toISOString() }, ...prev]); }, []);
 
   // ─── quotes ───────────────────────────────────────────────────────────────
+  const addSalesOrder    = useCallback((o) => setSalesOrders(prev => [{ ...o, id: o.id || `SO-${Date.now()}`, dateReceived: o.dateReceived || new Date().toISOString() }, ...prev]), []);
+  const updateSalesOrder = useCallback((id, data) => setSalesOrders(prev => prev.map(o => o.id === id ? { ...o, ...data } : o)), []);
+  const deleteSalesOrder = useCallback((id) => setSalesOrders(prev => prev.filter(o => o.id !== id)), []);
+
   const addQuote = useCallback((q) => {
     setQuotes(prev => {
       const num = `QT-${String(prev.length + 1).padStart(4, '0')}`;
@@ -726,6 +734,7 @@ export function AppProvider({ children }) {
           setOrders(defaults.orders);
           setNotifications(defaults.notifications);
           setStockMovements(defaults.stockMovements);
+          if (defaults.salesOrders) setSalesOrders(defaults.salesOrders);
           localStorage.setItem('arwa_dataInitializedFor', newBusinessType);
         }
       }
@@ -758,6 +767,7 @@ export function AppProvider({ children }) {
     users, setUsers, addUser, deleteUser,
     orders, setOrders, addOrder,
     quotes, addQuote, updateQuote, deleteQuote,
+    salesOrders, addSalesOrder, updateSalesOrder, deleteSalesOrder,
     onlineOrders, setOnlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, setAiMetrics,
@@ -792,6 +802,7 @@ export function AppProvider({ children }) {
     customers, addCustomer, updateCustomer, deleteCustomer,
     users, addUser, deleteUser,
     orders, addOrder, quotes, addQuote, updateQuote, deleteQuote, // eslint-disable-line react-hooks/exhaustive-deps
+    salesOrders, addSalesOrder, updateSalesOrder, deleteSalesOrder,
     onlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, aiIssues, repairHistory, addRepair,

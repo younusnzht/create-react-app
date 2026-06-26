@@ -28,6 +28,7 @@ import Payroll from './components/Payroll/Payroll';
 import CRAAuditExport from './components/Regulatory/CRAAuditExport';
 import Accounting from './components/Accounting/Accounting';
 import Quotes from './components/Quotes/Quotes';
+import SalesOrders from './components/SalesOrders/SalesOrders';
 import CashCounter from './components/CashCounter/CashCounter';
 import ModuleGuard from './components/Layout/ModuleGuard';
 import MasterPanel from './components/Master/MasterPanel';
@@ -67,6 +68,7 @@ function AppLayout() {
             <Route path="/cra-audit" element={<ModuleGuard path="/cra-audit"><CRAAuditExport /></ModuleGuard>} />
             <Route path="/accounting" element={<ModuleGuard path="/accounting"><Accounting /></ModuleGuard>} />
             <Route path="/quotes" element={<ModuleGuard path="/quotes"><Quotes /></ModuleGuard>} />
+            <Route path="/sales-orders" element={<ModuleGuard path="/sales-orders"><SalesOrders /></ModuleGuard>} />
             <Route path="/cash-counter" element={<ModuleGuard path="/cash-counter"><CashCounter /></ModuleGuard>} />
             <Route path="/master" element={<MasterPanel />} />
           </Routes>
