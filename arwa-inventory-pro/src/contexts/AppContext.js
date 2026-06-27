@@ -82,6 +82,7 @@ export function AppProvider({ children }) {
   const [chartOfAccounts, setChartOfAccounts] = useState(() => loadLS('arwa_chartOfAccounts', null));
   const [quotes, setQuotes] = useState(() => loadLS('arwa_quotes', []));
   const [salesOrders, setSalesOrders] = useState(() => loadLS('arwa_salesOrders', []));
+  const [coupons, setCoupons] = useState(() => loadLS('arwa_coupons', []));
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [tillSessions, setTillSessions] = useState(() => loadLS('arwa_till_sessions', []));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
@@ -213,6 +214,7 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_expenses',         JSON.stringify(expenses)),         [expenses]);
   useEffect(() => localStorage.setItem('arwa_quotes',           JSON.stringify(quotes)),           [quotes]);
   useEffect(() => localStorage.setItem('arwa_salesOrders',      JSON.stringify(salesOrders)),      [salesOrders]);
+  useEffect(() => localStorage.setItem('arwa_coupons',          JSON.stringify(coupons)),          [coupons]);
   useEffect(() => localStorage.setItem('arwa_auditLog',  JSON.stringify(auditLog.slice(-500))), [auditLog]);
   useEffect(() => localStorage.setItem('arwa_onboarded',    JSON.stringify(onboarded)),    [onboarded]);
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
@@ -568,6 +570,21 @@ export function AppProvider({ children }) {
   const updateSalesOrder = useCallback((id, data) => setSalesOrders(prev => prev.map(o => o.id === id ? { ...o, ...data } : o)), []);
   const deleteSalesOrder = useCallback((id) => setSalesOrders(prev => prev.filter(o => o.id !== id)), []);
 
+  // ─── coupons (master admin only) ──────────────────────────────────────────
+  const addCoupon    = useCallback((c) => setCoupons(prev => [{ ...c, id: c.id || `CPN-${Date.now()}`, createdAt: new Date().toISOString(), usedBy: [] }, ...prev]), []);
+  const updateCoupon = useCallback((id, data) => setCoupons(prev => prev.map(c => c.id === id ? { ...c, ...data } : c)), []);
+  const deleteCoupon = useCallback((id) => setCoupons(prev => prev.filter(c => c.id !== id)), []);
+  const redeemCoupon = useCallback((code, userEmail) => {
+    const coupon = coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.active);
+    if (!coupon) return { ok: false, error: 'Invalid or expired coupon code.' };
+    if (coupon.targetEmail && coupon.targetEmail.toLowerCase() !== userEmail.toLowerCase()) return { ok: false, error: 'This coupon is not valid for your account.' };
+    if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) return { ok: false, error: 'This coupon has expired.' };
+    if (coupon.usageLimit && coupon.usedBy.length >= coupon.usageLimit) return { ok: false, error: 'This coupon has reached its usage limit.' };
+    if (coupon.usedBy.includes(userEmail)) return { ok: false, error: 'You have already used this coupon.' };
+    setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, usedBy: [...c.usedBy, userEmail] } : c));
+    return { ok: true, coupon };
+  }, [coupons]);
+
   const addQuote = useCallback((q) => {
     setQuotes(prev => {
       const num = `QT-${String(prev.length + 1).padStart(4, '0')}`;
@@ -826,6 +843,7 @@ export function AppProvider({ children }) {
     orders, setOrders, addOrder,
     quotes, addQuote, updateQuote, deleteQuote,
     salesOrders, addSalesOrder, updateSalesOrder, deleteSalesOrder,
+    coupons, addCoupon, updateCoupon, deleteCoupon, redeemCoupon,
     onlineOrders, setOnlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, setAiMetrics,
@@ -862,6 +880,7 @@ export function AppProvider({ children }) {
     users, addUser, deleteUser,
     orders, addOrder, quotes, addQuote, updateQuote, deleteQuote, // eslint-disable-line react-hooks/exhaustive-deps
     salesOrders, addSalesOrder, updateSalesOrder, deleteSalesOrder,
+    coupons, addCoupon, updateCoupon, deleteCoupon, redeemCoupon,
     onlineOrders, updateOnlineOrderStatus, addOnlineOrder,
     notifications, markNotificationRead, unreadCount,
     aiMetrics, aiIssues, repairHistory, addRepair,

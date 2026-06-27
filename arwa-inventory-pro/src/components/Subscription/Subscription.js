@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, X, Zap, Shield, Crown, CreditCard,
   Sparkles, ArrowRight, Check, AlertTriangle, Package,
-  Users, Bot
+  Users, Bot, Tag
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import { SUBSCRIPTION_PLANS, AI_ADDONS, ORDER_ADDON_PRICE, BUSINESS_TYPES } from '../../data/mockData';
@@ -155,9 +155,11 @@ function AIAddonCard({ addon, active, onToggle, billing }) {
 }
 
 export default function Subscription() {
-  const { subscription, setSubscription, showToast, orders, getEnabledModules, users } = useApp();
+  const { subscription, setSubscription, showToast, orders, getEnabledModules, users, currentUser, redeemCoupon } = useApp();
   const [billing, setBilling] = useState(subscription.billing);
   const [showUpgradeModal, setShowUpgradeModal] = useState(null);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponResult, setCouponResult] = useState(null);
 
   const currentMonthOrders = useMemo(() => {
     const monthKey = new Date().toISOString().slice(0, 7);
@@ -457,6 +459,58 @@ export default function Subscription() {
           </div>
         );
       })()}
+
+      {/* Coupon Redemption */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Tag size={16} color="white" />
+          </div>
+          <div>
+            <h3 style={{ fontSize: 15, fontWeight: 700 }}>Apply Coupon</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Have a coupon code? Enter it below to receive your discount</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            value={couponInput}
+            onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponResult(null); }}
+            placeholder="Enter coupon code (e.g. WELCOME20)"
+            style={{ flex: 1, background: 'var(--bg-tertiary)', border: `1px solid ${couponResult?.ok === false ? 'var(--danger)' : couponResult?.ok ? '#10B981' : 'var(--border)'}`, borderRadius: 8, padding: '10px 14px', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.08em', outline: 'none' }}
+            onKeyDown={e => e.key === 'Enter' && couponInput && e.currentTarget.nextSibling?.click()}
+          />
+          <button
+            className="btn btn-primary"
+            disabled={!couponInput.trim()}
+            style={{ minWidth: 120, justifyContent: 'center' }}
+            onClick={() => {
+              const result = redeemCoupon(couponInput.trim(), currentUser?.email || '');
+              setCouponResult(result);
+              if (result.ok) {
+                const c = result.coupon;
+                const discount = c.discountType === 'percent' ? `${c.discountValue}% discount` : `$${c.discountValue} discount`;
+                showToast(`Coupon applied! ${discount} on your next billing cycle.`, 'success');
+                setCouponInput('');
+              } else {
+                showToast(result.error, 'error');
+              }
+            }}
+          >
+            <Tag size={14} /> Apply
+          </button>
+        </div>
+        {couponResult && !couponResult.ok && (
+          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 13, color: '#EF4444', fontWeight: 500 }}>
+            {couponResult.error}
+          </div>
+        )}
+        {couponResult?.ok && (
+          <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', fontSize: 13, color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle size={14} />
+            Coupon applied! {couponResult.coupon.discountType === 'percent' ? `${couponResult.coupon.discountValue}% off` : `$${couponResult.coupon.discountValue} off`} will be reflected on your next invoice.
+          </div>
+        )}
+      </div>
 
       {/* Billing Info */}
       <div className="grid-2">

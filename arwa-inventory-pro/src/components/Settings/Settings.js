@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload, Lock } from 'lucide-react';
+import { Save, Building2, Bell, Shield, Database, Palette, Printer, Zap, X, Key, Eye, EyeOff, Download, Upload, Lock, Tag, Plus, Trash2, CheckCircle } from 'lucide-react';
 import { BUSINESS_TYPES } from '../../data/mockData';
 import { useApp } from '../../contexts/AppContext';
 
@@ -218,7 +218,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription, isSuperAdmin } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription, isSuperAdmin, coupons, addCoupon, updateCoupon, deleteCoupon } = useApp();
   const [settings, setSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
   });
@@ -226,6 +226,8 @@ export default function Settings() {
   const [deleteInput, setDeleteInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
+  const [showCouponForm, setShowCouponForm] = useState(false);
+  const [couponForm, setCouponForm] = useState({ code: '', discountType: 'percent', discountValue: '', targetEmail: '', expiryDate: '', usageLimit: '', note: '' });
 
   const set = (k, v) => {
     setSettings(s => ({ ...s, [k]: v }));
@@ -783,6 +785,133 @@ export default function Settings() {
           </SettingRow>
         </div>
       </div>
+
+      {/* Coupon Management — master admin only */}
+      {isSuperAdmin && (
+        <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Tag size={16} color="white" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Coupon Management</h3>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Create discount coupons targeted to specific clients — visible only to you</p>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowCouponForm(true)}>
+              <Plus size={13} /> Create Coupon
+            </button>
+          </div>
+
+          {coupons.length === 0 && !showCouponForm && (
+            <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-muted)' }}>
+              <Tag size={28} style={{ marginBottom: 10, opacity: 0.3 }} />
+              <p style={{ fontSize: 13 }}>No coupons yet. Create one to offer discounts to specific clients.</p>
+            </div>
+          )}
+
+          {coupons.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: showCouponForm ? 16 : 0 }}>
+              {coupons.map(c => (
+                <div key={c.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                  borderRadius: 10, border: `1px solid ${c.active ? 'rgba(16,185,129,0.25)' : 'var(--border)'}`,
+                  background: c.active ? 'rgba(16,185,129,0.04)' : 'var(--bg-tertiary)',
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.active ? '#10B981' : 'var(--text-muted)', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14, color: 'var(--primary-light)', letterSpacing: '0.08em' }}>{c.code}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: 'rgba(79,70,229,0.12)', color: 'var(--primary-light)' }}>
+                        {c.discountType === 'percent' ? `${c.discountValue}% OFF` : `$${c.discountValue} OFF`}
+                      </span>
+                      {c.targetEmail && (
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>→ {c.targetEmail}</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 12 }}>
+                      {c.expiryDate && <span>Expires: {c.expiryDate}</span>}
+                      {c.usageLimit && <span>Limit: {c.usedBy?.length || 0}/{c.usageLimit} uses</span>}
+                      {!c.usageLimit && <span>Used: {c.usedBy?.length || 0} times</span>}
+                      {c.note && <span>"{c.note}"</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateCoupon(c.id, { active: !c.active })}
+                    style={{ padding: '4px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: c.active ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)', color: c.active ? '#D97706' : '#10B981' }}
+                  >
+                    {c.active ? 'Deactivate' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => { deleteCoupon(c.id); showToast('Coupon deleted', 'info'); }}
+                    style={{ padding: '4px 8px', borderRadius: 7, border: 'none', cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#EF4444' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showCouponForm && (
+            <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: 18, border: '1px solid var(--border)' }}>
+              <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>New Coupon</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Coupon Code *</label>
+                  <input
+                    className="form-control" placeholder="e.g. WELCOME20"
+                    value={couponForm.code}
+                    onChange={e => setCouponForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                    style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.08em' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Discount *</label>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <select className="form-control" style={{ width: 110, flexShrink: 0 }} value={couponForm.discountType} onChange={e => setCouponForm(f => ({ ...f, discountType: e.target.value }))}>
+                      <option value="percent">% Off</option>
+                      <option value="fixed">$ Off</option>
+                    </select>
+                    <input className="form-control" type="number" min="1" placeholder={couponForm.discountType === 'percent' ? '20' : '50'} value={couponForm.discountValue} onChange={e => setCouponForm(f => ({ ...f, discountValue: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Target Email (optional)</label>
+                  <input className="form-control" type="email" placeholder="client@company.com — leave blank for anyone" value={couponForm.targetEmail} onChange={e => setCouponForm(f => ({ ...f, targetEmail: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Expiry Date (optional)</label>
+                  <input className="form-control" type="date" value={couponForm.expiryDate} onChange={e => setCouponForm(f => ({ ...f, expiryDate: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Usage Limit (optional)</label>
+                  <input className="form-control" type="number" min="1" placeholder="e.g. 1 for single-use" value={couponForm.usageLimit} onChange={e => setCouponForm(f => ({ ...f, usageLimit: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 5 }}>Internal Note (optional)</label>
+                  <input className="form-control" placeholder="e.g. 3-month promo for pharmacy clients" value={couponForm.note} onChange={e => setCouponForm(f => ({ ...f, note: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => { setShowCouponForm(false); setCouponForm({ code: '', discountType: 'percent', discountValue: '', targetEmail: '', expiryDate: '', usageLimit: '', note: '' }); }}>Cancel</button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    if (!couponForm.code || !couponForm.discountValue) { showToast('Code and discount are required', 'warning'); return; }
+                    if (coupons.find(c => c.code === couponForm.code)) { showToast('A coupon with this code already exists', 'warning'); return; }
+                    addCoupon({ ...couponForm, active: true, usageLimit: couponForm.usageLimit ? Number(couponForm.usageLimit) : null, discountValue: Number(couponForm.discountValue) });
+                    setShowCouponForm(false);
+                    setCouponForm({ code: '', discountType: 'percent', discountValue: '', targetEmail: '', expiryDate: '', usageLimit: '', note: '' });
+                    showToast(`Coupon ${couponForm.code} created!`, 'success');
+                  }}
+                >
+                  <CheckCircle size={13} /> Save Coupon
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {showDeleteModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowDeleteModal(false)}>
