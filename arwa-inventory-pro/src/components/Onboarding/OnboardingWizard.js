@@ -99,7 +99,7 @@ function StepBusiness({ data, onChange, onNext, onBack }) {
         <label className="form-label">Business Name *</label>
         <input
           className="form-control"
-          placeholder="e.g. Arwa Enterprises"
+          placeholder="e.g. Your Business Name"
           value={data.businessName}
           onChange={e => onChange('businessName', e.target.value)}
           style={{ borderColor: errors.businessName ? 'var(--danger)' : undefined }}
@@ -361,9 +361,9 @@ function StepDone({ businessName, onFinish }) {
 // ── Main Wizard ──────────────────────────────────────────────────────────────
 
 export default function OnboardingWizard() {
-  const { completeOnboarding, setCurrency, showToast } = useApp();
+  const { completeOnboarding, setCurrency, showToast, businessName: existingName } = useApp();
   const [step, setStep] = useState(0);
-  const [bizData, setBizData] = useState({ businessName: '', businessType: '', currency: 'USD' });
+  const [bizData, setBizData] = useState({ businessName: existingName || '', businessType: '', currency: 'CAD' });
 
   const updateBiz = (k, v) => setBizData(f => ({ ...f, [k]: v }));
 

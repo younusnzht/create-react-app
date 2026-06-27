@@ -218,16 +218,26 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription, isSuperAdmin, coupons, addCoupon, updateCoupon, deleteCoupon } = useApp();
+  const { theme, toggleTheme, colorTheme, setColorTheme, fontFamily, setFontFamily, fontSize, setFontSize, showToast, setCurrency, businessName, setBusinessName, apiKey, setApiKey, scanStats, exportAllData, importAllData, subscription, setSubscription, isSuperAdmin, coupons, addCoupon, updateCoupon, deleteCoupon } = useApp();
   const [settings, setSettings] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('arwa_settings')) || defaultSettings; } catch { return defaultSettings; }
+    try {
+      const saved = JSON.parse(localStorage.getItem('arwa_settings'));
+      return saved ? saved : defaultSettings;
+    } catch { return defaultSettings; }
   });
+  // Sync companyName from context businessName on mount (handles master-assigned name)
+  React.useEffect(() => {
+    if (businessName && businessName !== 'Arwa Enterprises') {
+      setSettings(s => ({ ...s, companyName: businessName }));
+    }
+  }, [businessName]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState(apiKey || '');
   const [showCouponForm, setShowCouponForm] = useState(false);
   const [couponForm, setCouponForm] = useState({ code: '', discountType: 'percent', discountValue: '', targetEmail: '', expiryDate: '', usageLimit: '', note: '' });
+  const [backupRequest, setBackupRequest] = useState({ reason: '', submitted: false });
 
   const set = (k, v) => {
     setSettings(s => ({ ...s, [k]: v }));
@@ -261,14 +271,6 @@ export default function Settings() {
       ]
     },
     {
-      icon: Database, title: 'Data & Backup',
-      items: [
-        { key: 'autoBackup', label: 'Automatic Backup', desc: 'Automatically backup data', type: 'toggle' },
-        { key: 'backupFrequency', label: 'Backup Frequency', type: 'select', options: ['hourly', 'daily', 'weekly', 'monthly'] },
-        { key: 'cloudSync', label: 'Cloud Synchronization', desc: 'Sync data across devices in real-time', type: 'toggle' },
-      ]
-    },
-    {
       icon: Printer, title: 'Hardware',
       items: [
         { key: 'receiptPrinter', label: 'Receipt Printer Type', type: 'select', options: ['thermal', 'inkjet', 'laser', 'none'] },
@@ -287,6 +289,7 @@ export default function Settings() {
         <button className="btn btn-primary" onClick={() => {
           localStorage.setItem('arwa_settings', JSON.stringify(settings));
           setCurrency(settings.currency);
+          if (settings.companyName) setBusinessName(settings.companyName);
           showToast('Settings saved successfully');
         }}>
           <Save size={14} /> Save Changes
@@ -479,79 +482,81 @@ export default function Settings() {
           );
         })()}
 
-        {/* AI & API Configuration */}
-        <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Key size={16} style={{ color: 'var(--primary-light)' }} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: 15, fontWeight: 700 }}>AI & API Configuration</h3>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Claude API — Haiku for monitoring · Sonnet for self-healing</p>
-            </div>
-            {apiKey && (
-              <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>
-                ● Live AI Active
-              </span>
-            )}
-          </div>
-
-          {/* API Key input row */}
-          <SettingRow label="Claude API Key" desc="Your Anthropic API key — stored locally in your browser only">
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  className="form-control"
-                  style={{ width: 280, paddingRight: 36, fontFamily: 'monospace', fontSize: 12 }}
-                  placeholder="sk-ant-api03-..."
-                  value={apiKeyInput}
-                  onChange={e => setApiKeyInput(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(v => !v)}
-                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
-                >
-                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
+        {/* AI & API Configuration — master admin only */}
+        {isSuperAdmin && (
+          <div className="card" style={{ border: '1px solid rgba(79,70,229,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Key size={16} style={{ color: 'var(--primary-light)' }} />
               </div>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setApiKey(apiKeyInput);
-                  showToast(apiKeyInput ? 'API key saved — live AI scans enabled' : 'API key cleared', apiKeyInput ? 'success' : 'info');
-                }}
-              >
-                Save Key
-              </button>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700 }}>AI & API Configuration</h3>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>Claude API — Haiku for monitoring · Sonnet for self-healing</p>
+              </div>
               {apiKey && (
-                <button className="btn btn-danger btn-sm" onClick={() => { setApiKey(''); setApiKeyInput(''); showToast('API key removed', 'info'); }}>
-                  Remove
-                </button>
+                <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>
+                  ● Live AI Active
+                </span>
               )}
             </div>
-          </SettingRow>
 
-          {/* Security notice */}
-          <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', marginBottom: 16, fontSize: 12, color: '#D97706' }}>
-            ⚠️ <strong>Security note:</strong> Your API key is stored in browser localStorage and sent directly to Anthropic's API. For production, use a backend proxy server to keep the key server-side.
-          </div>
-
-          {/* Monthly usage stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            {[
-              { label: 'Scans Today',     value: scanStats.scansToday   || 0, unit: '',  color: '#4F46E5' },
-              { label: 'Monthly Scans',   value: scanStats.monthlyScans || 0, unit: '',  color: '#7C3AED' },
-              { label: 'API Cost (mo)',    value: `$${(scanStats.monthlyCost || 0).toFixed(4)}`, unit: '', color: '#10B981' },
-            ].map(s => (
-              <div key={s.label} style={{ padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8, textAlign: 'center' }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}{s.unit}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
+            {/* API Key input row */}
+            <SettingRow label="Claude API Key" desc="Your Anthropic API key — stored locally in your browser only">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    className="form-control"
+                    style={{ width: 280, paddingRight: 36, fontFamily: 'monospace', fontSize: 12 }}
+                    placeholder="sk-ant-api03-..."
+                    value={apiKeyInput}
+                    onChange={e => setApiKeyInput(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(v => !v)}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                  >
+                    {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setApiKey(apiKeyInput);
+                    showToast(apiKeyInput ? 'API key saved — live AI scans enabled' : 'API key cleared', apiKeyInput ? 'success' : 'info');
+                  }}
+                >
+                  Save Key
+                </button>
+                {apiKey && (
+                  <button className="btn btn-danger btn-sm" onClick={() => { setApiKey(''); setApiKeyInput(''); showToast('API key removed', 'info'); }}>
+                    Remove
+                  </button>
+                )}
               </div>
-            ))}
+            </SettingRow>
+
+            {/* Security notice */}
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', marginBottom: 16, fontSize: 12, color: '#D97706' }}>
+              ⚠️ <strong>Security note:</strong> Your API key is stored in browser localStorage and sent directly to Anthropic's API. For production, use a backend proxy server to keep the key server-side.
+            </div>
+
+            {/* Monthly usage stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {[
+                { label: 'Scans Today',     value: scanStats.scansToday   || 0, unit: '',  color: '#4F46E5' },
+                { label: 'Monthly Scans',   value: scanStats.monthlyScans || 0, unit: '',  color: '#7C3AED' },
+                { label: 'API Cost (mo)',    value: `$${(scanStats.monthlyCost || 0).toFixed(4)}`, unit: '', color: '#10B981' },
+              ].map(s => (
+                <div key={s.label} style={{ padding: 12, background: 'var(--bg-tertiary)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}{s.unit}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Currency card — full world list */}
         <div className="card">
@@ -694,21 +699,6 @@ export default function Settings() {
                 )}
               </SettingRow>
             ))}
-            {section.title === 'Data & Backup' && (
-              <div style={{ padding: '16px 0', borderTop: '1px solid var(--border)', marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button className="btn btn-secondary" onClick={() => exportAllData()}>
-                  <Download size={14} style={{ marginRight: 6 }}/> Export Backup (.json)
-                </button>
-                <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
-                  <Upload size={14} style={{ marginRight: 6 }}/> Import Backup
-                  <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) importAllData(e.target.files[0]); }} />
-                </label>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>
-                  Backup saves all products, orders, customers, suppliers and settings to a .json file.
-                  Import restores from a previous backup.
-                </div>
-              </div>
-            )}
             {section.title === 'Hardware' && (
               <div style={{ padding: '16px 0', borderTop: '1px solid var(--border)', marginTop: 12 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Thermal Printer (USB/Serial)</div>
@@ -760,6 +750,100 @@ export default function Settings() {
             )}
           </div>
         ))}
+
+        {/* Data & Backup — full control for master, request-only for clients */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,70,229,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Database size={16} style={{ color: 'var(--primary-light)' }} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Data & Backup</h3>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{isSuperAdmin ? 'Export, import, and manage client data backups' : 'Request a data restore — managed by Arwa platform'}</p>
+            </div>
+          </div>
+
+          {isSuperAdmin ? (
+            <>
+              <SettingRow label="Automatic Backup" desc="Automatically backup all data periodically">
+                <Toggle value={settings.autoBackup} onChange={v => set('autoBackup', v)} />
+              </SettingRow>
+              <SettingRow label="Backup Frequency" desc="">
+                <select className="form-control" style={{ width: 160 }} value={settings.backupFrequency} onChange={e => set('backupFrequency', e.target.value)}>
+                  {['hourly', 'daily', 'weekly', 'monthly'].map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
+                </select>
+              </SettingRow>
+              <SettingRow label="Cloud Synchronization" desc="Sync data across devices in real-time">
+                <Toggle value={settings.cloudSync} onChange={v => set('cloudSync', v)} />
+              </SettingRow>
+              <div style={{ padding: '16px 0', borderTop: '1px solid var(--border)', marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary" onClick={() => exportAllData()}>
+                  <Download size={14} style={{ marginRight: 6 }}/> Export Backup (.json)
+                </button>
+                <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+                  <Upload size={14} style={{ marginRight: 6 }}/> Import Backup
+                  <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) importAllData(e.target.files[0]); }} />
+                </label>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                  Backup saves all products, orders, customers, suppliers and settings to a .json file.
+                </div>
+              </div>
+            </>
+          ) : (
+            backupRequest.submitted ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <CheckCircle size={48} style={{ color: 'var(--success)', margin: '0 auto 12px' }} />
+                <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Request Submitted!</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, maxWidth: 400, margin: '0 auto' }}>
+                  Your backup restore request has been received. Once payment is confirmed, your data will be restored <strong>within 24 hours</strong>.
+                  Our team will contact you at <strong>{settings.companyName}</strong> to coordinate the restore.
+                </p>
+                <button className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => setBackupRequest({ reason: '', submitted: false })}>
+                  Submit Another Request
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ padding: '12px 16px', borderRadius: 10, background: 'rgba(79,70,229,0.07)', border: '1px solid rgba(79,70,229,0.2)', marginBottom: 20 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: 'var(--primary-light)' }}>🔒 Data Backup is Managed by Arwa Platform</div>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 8 }}>
+                    Your data is automatically backed up and secured by the Arwa platform team. Direct export/import access is not available for client accounts.
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    If you need to restore a backup (e.g., accidental deletion), submit a request below. A restore fee of <strong>CA$99</strong> applies.
+                    Once payment is processed, your data will be restored within <strong>24 hours</strong>.
+                  </p>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Reason for Restore Request</label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    placeholder="e.g. Accidentally deleted products, need to restore from last week's backup..."
+                    value={backupRequest.reason}
+                    onChange={e => setBackupRequest(r => ({ ...r, reason: e.target.value }))}
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+                <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', marginBottom: 16, fontSize: 12, color: '#D97706' }}>
+                  ⚠️ Submitting this request authorizes a <strong>CA$99 charge</strong> to your account's payment method on file. Data will be provided within <strong>24 hours</strong> of successful payment.
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={!backupRequest.reason.trim()}
+                  onClick={() => {
+                    const requests = JSON.parse(localStorage.getItem('arwa_backupRequests') || '[]');
+                    requests.push({ reason: backupRequest.reason, submittedAt: new Date().toISOString(), status: 'pending', fee: 99 });
+                    localStorage.setItem('arwa_backupRequests', JSON.stringify(requests));
+                    setBackupRequest(r => ({ ...r, submitted: true }));
+                  }}
+                >
+                  <Database size={14} style={{ marginRight: 6 }} /> Submit Restore Request (CA$99)
+                </button>
+              </div>
+            )
+          )}
+        </div>
 
         {/* Danger Zone */}
         <div className="card" style={{ border: '1px solid rgba(239,68,68,0.2)' }}>

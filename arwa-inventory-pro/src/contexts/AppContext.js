@@ -816,6 +816,19 @@ export function AppProvider({ children }) {
         }
       }
     }
+
+    // Auto-onboard client with master-assigned business name
+    if (found.role === 'client' || (found.role !== 'superadmin' && found.email !== SUPER_ADMIN_EMAIL)) {
+      const emailDomain2 = email.split('@')[1];
+      const cfg2 = clientConfigs.find(c =>
+        c.email === email || (c.domain && emailDomain2 && c.domain.toLowerCase() === emailDomain2.toLowerCase())
+      );
+      if (cfg2?.clientName) {
+        setBusinessName(cfg2.clientName);
+        setOnboarded(true);
+      }
+    }
+
     return true;
   }, [users, clientConfigs, setUsers]);
 

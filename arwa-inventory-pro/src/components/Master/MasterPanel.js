@@ -27,12 +27,31 @@ function ClientModal({ client, onClose, onSave }) {
     moduleOverrides: {},
     accessCode: generateAccessCode(),
     createdAt: new Date().toISOString().split('T')[0],
+    // Director / Owner
+    directorName: '', directorPhone: '', directorEmail: '', directorAddress: '',
+    directorPhoneSameAsBiz: false, directorEmailSameAsBiz: false, directorAddressSameAsBiz: false,
+    additionalDirectors: [],
+    // Business Contact
+    businessPhone: '', businessEmail: '', website: '', businessAddress: '', taxRegNumber: '',
   });
   const [showPw, setShowPw] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const [activeTab, setActiveTab] = useState('business');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const copyText = (text) => navigator.clipboard.writeText(text).catch(() => {});
+
+  const addDirector = () => {
+    if (form.additionalDirectors.length >= 5) return;
+    set('additionalDirectors', [...form.additionalDirectors, { name: '', phone: '', email: '' }]);
+  };
+  const updateDirector = (idx, field, val) => {
+    const dirs = form.additionalDirectors.map((d, i) => i === idx ? { ...d, [field]: val } : d);
+    set('additionalDirectors', dirs);
+  };
+  const removeDirector = (idx) => {
+    set('additionalDirectors', form.additionalDirectors.filter((_, i) => i !== idx));
+  };
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -42,122 +61,257 @@ function ClientModal({ client, onClose, onSave }) {
           <button className="icon-btn" onClick={onClose}><span style={{ fontSize: 18 }}>×</span></button>
         </div>
         <form onSubmit={e => { e.preventDefault(); onSave(form); }}>
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Business / Client Name *</label>
-              <input className="form-control" required value={form.clientName} onChange={e => set('clientName', e.target.value)} placeholder="e.g. Sunrise Pharmacy" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-control" value={form.status} onChange={e => set('status', e.target.value)}>
-                {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
+            {[
+              { id: 'business', label: 'Business Info' },
+              { id: 'director', label: 'Directors' },
+              { id: 'contact', label: 'Contact & Address' },
+              { id: 'account', label: 'Account' },
+            ].map(t => (
+              <button key={t.id} type="button" onClick={() => setActiveTab(t.id)} style={{
+                padding: '8px 16px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                background: 'none', borderBottom: activeTab === t.id ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === t.id ? 'var(--primary-light)' : 'var(--text-muted)',
+                marginBottom: -1, transition: 'all 0.15s',
+              }}>{t.label}</button>
+            ))}
           </div>
 
-          {/* Login credentials box */}
-          <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(91,95,207,0.06)', border: '1px solid rgba(91,95,207,0.25)', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Key size={12} /> Login Credentials (client uses these to log in)
-            </div>
-            <div className="grid-2">
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Login Email *</label>
-                <input className="form-control" type="email" required value={form.email}
-                  onChange={e => set('email', e.target.value)} placeholder="owner@business.com" />
+          {/* Tab: Business Info */}
+          {activeTab === 'business' && (
+            <div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Business / Client Name *</label>
+                  <input className="form-control" required value={form.clientName} onChange={e => set('clientName', e.target.value)} placeholder="e.g. Sunrise Pharmacy" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select className="form-control" value={form.status} onChange={e => set('status', e.target.value)}>
+                    {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{isEdit ? 'New Password (leave blank to keep)' : 'Login Password *'}</label>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    className="form-control"
-                    type={showPw ? 'text' : 'password'}
-                    required={!isEdit}
-                    value={form.loginPassword}
-                    onChange={e => set('loginPassword', e.target.value)}
-                    placeholder={isEdit ? 'Leave blank to keep current' : 'Set a strong password'}
-                    style={{ flex: 1 }}
-                  />
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowPw(v => !v)} style={{ flexShrink: 0 }}>
-                    {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
+
+              {/* Login credentials */}
+              <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(91,95,207,0.06)', border: '1px solid rgba(91,95,207,0.25)', marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Key size={12} /> Login Credentials
+                </div>
+                <div className="grid-2">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Login Email *</label>
+                    <input className="form-control" type="email" required value={form.email} onChange={e => set('email', e.target.value)} placeholder="owner@business.com" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">{isEdit ? 'New Password (leave blank to keep)' : 'Login Password *'}</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input className="form-control" type={showPw ? 'text' : 'password'} required={!isEdit} value={form.loginPassword}
+                        onChange={e => set('loginPassword', e.target.value)} placeholder={isEdit ? 'Leave blank to keep' : 'Set a strong password'} style={{ flex: 1 }} />
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowPw(v => !v)} style={{ flexShrink: 0 }}>
+                        {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => copyText(form.loginPassword)}>
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Company Domain (optional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                  <span style={{ padding: '9px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRight: 'none', borderRadius: '7px 0 0 7px', fontSize: 13, color: 'var(--text-muted)' }}>@</span>
+                  <input className="form-control" value={form.domain} onChange={e => set('domain', e.target.value.replace('@', ''))} placeholder="business.com" style={{ borderRadius: '0 7px 7px 0' }} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Internal Notes</label>
+                <textarea className="form-control" rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Notes visible only to you..." style={{ resize: 'vertical' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Directors */}
+          {activeTab === 'director' && (
+            <div>
+              <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(79,70,229,0.07)', border: '1px solid rgba(79,70,229,0.2)', marginBottom: 20, fontSize: 12, color: 'var(--text-secondary)' }}>
+                Primary director/owner information is stored for your records only and is not shared with staff.
+              </div>
+
+              {/* Primary Director */}
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', marginBottom: 12 }}>Primary Director / Owner</div>
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
+                <input className="form-control" required value={form.directorName} onChange={e => set('directorName', e.target.value)} placeholder="e.g. John Smith" />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Contact Number *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input className="form-control" required value={form.directorPhone} onChange={e => set('directorPhone', e.target.value)} placeholder="+1-416-555-0100" style={{ flex: 1 }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.directorPhoneSameAsBiz} onChange={e => { set('directorPhoneSameAsBiz', e.target.checked); if (e.target.checked) set('businessPhone', form.directorPhone); }} />
+                    Same as business
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Email Address *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input className="form-control" type="email" required value={form.directorEmail} onChange={e => set('directorEmail', e.target.value)} placeholder="john@business.com" style={{ flex: 1 }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.directorEmailSameAsBiz} onChange={e => { set('directorEmailSameAsBiz', e.target.checked); if (e.target.checked) set('businessEmail', form.directorEmail); }} />
+                    Same as business
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Address *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input className="form-control" required value={form.directorAddress} onChange={e => set('directorAddress', e.target.value)} placeholder="123 Main St, Toronto, ON M1A 1A1" style={{ flex: 1 }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.directorAddressSameAsBiz} onChange={e => { set('directorAddressSameAsBiz', e.target.checked); if (e.target.checked) set('businessAddress', form.directorAddress); }} />
+                    Same as business
+                  </label>
+                </div>
+              </div>
+
+              {/* Additional Directors */}
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>Additional Directors <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>(Optional — up to 5)</span></div>
+                  {form.additionalDirectors.length < 5 && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={addDirector}>
+                      <Plus size={12} style={{ marginRight: 4 }} /> Add Director
+                    </button>
+                  )}
+                </div>
+                {form.additionalDirectors.length === 0 && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No additional directors added.</p>
+                )}
+                {form.additionalDirectors.map((dir, idx) => (
+                  <div key={idx} style={{ padding: 14, borderRadius: 10, background: 'var(--bg-tertiary)', border: '1px solid var(--border)', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>Director #{idx + 2}</span>
+                      <button type="button" className="btn btn-danger btn-sm" onClick={() => removeDirector(idx)} style={{ padding: '3px 8px' }}>
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                    <div className="grid-2">
+                      <div className="form-group" style={{ marginBottom: 8 }}>
+                        <label className="form-label" style={{ fontSize: 11 }}>Full Name</label>
+                        <input className="form-control" value={dir.name} onChange={e => updateDirector(idx, 'name', e.target.value)} placeholder="Full Name" />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 8 }}>
+                        <label className="form-label" style={{ fontSize: 11 }}>Phone</label>
+                        <input className="form-control" value={dir.phone} onChange={e => updateDirector(idx, 'phone', e.target.value)} placeholder="+1-416-555-0100" />
+                      </div>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontSize: 11 }}>Email</label>
+                      <input className="form-control" type="email" value={dir.email} onChange={e => updateDirector(idx, 'email', e.target.value)} placeholder="director@business.com" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Contact & Address */}
+          {activeTab === 'contact' && (
+            <div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Business Phone *</label>
+                  <input className="form-control" required value={form.businessPhone} onChange={e => set('businessPhone', e.target.value)} placeholder="+1-416-555-0100" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Business Email *</label>
+                  <input className="form-control" type="email" required value={form.businessEmail} onChange={e => set('businessEmail', e.target.value)} placeholder="info@business.com" />
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Website (if applicable)</label>
+                  <input className="form-control" value={form.website} onChange={e => set('website', e.target.value)} placeholder="https://www.business.com" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Tax Registration Number</label>
+                  <input className="form-control" value={form.taxRegNumber} onChange={e => set('taxRegNumber', e.target.value)} placeholder="e.g. 123456789RT0001" />
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>GST/HST or CRA Business Number</p>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Business Address *</label>
+                <input className="form-control" required value={form.businessAddress} onChange={e => set('businessAddress', e.target.value)} placeholder="123 Main St, Toronto, ON M1A 1A1, Canada" />
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Account Configuration */}
+          {activeTab === 'account' && (
+            <div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Business Type *</label>
+                  <select className="form-control" value={form.businessType} onChange={e => set('businessType', e.target.value)}>
+                    {BUSINESS_TYPE_OPTIONS.filter(b => b.key !== 'platform_admin').map(b => (
+                      <option key={b.key} value={b.key}>{b.emoji} {b.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Subscription Plan *</label>
+                  <select className="form-control" value={form.plan} onChange={e => set('plan', e.target.value)}>
+                    {PLAN_OPTIONS.map(p => (
+                      <option key={p} value={p}>{SUBSCRIPTION_PLANS[p].name} — ${SUBSCRIPTION_PLANS[p].monthlyPrice}/mo</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Client Reference Code</label>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input className="form-control" readOnly value={showCode ? form.accessCode : '••••-••••-••••-••••'} style={{ fontFamily: 'monospace', letterSpacing: 2 }} />
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCode(v => !v)} style={{ flexShrink: 0 }}>
+                    {showCode ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
-                  <button type="button" className="btn btn-secondary btn-sm" style={{ flexShrink: 0 }}
-                    onClick={() => copyText(form.loginPassword)} title="Copy password">
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyText(form.accessCode)} style={{ flexShrink: 0 }}>
                     <Copy size={13} />
                   </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => set('accessCode', generateAccessCode())} style={{ flexShrink: 0 }}>
+                    New
+                  </button>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  Share this password with the client securely
-                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>For your records only</p>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Optional domain access */}
-          <div className="form-group">
-            <label className="form-label">Company Domain (optional — grants access to any @domain.com login)</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-              <span style={{ padding: '9px 10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRight: 'none', borderRadius: '7px 0 0 7px', fontSize: 13, color: 'var(--text-muted)' }}>@</span>
-              <input className="form-control" value={form.domain}
-                onChange={e => set('domain', e.target.value.replace('@', ''))}
-                placeholder="business.com"
-                style={{ borderRadius: '0 7px 7px 0' }} />
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { id: 'business', label: 'Business Info' },
+                { id: 'director', label: 'Directors' },
+                { id: 'contact', label: 'Contact & Address' },
+                { id: 'account', label: 'Account' },
+              ].map((t) => (
+                <div key={t.id} style={{ width: 8, height: 8, borderRadius: '50%', background: activeTab === t.id ? 'var(--primary)' : 'var(--border)' }} />
+              ))}
             </div>
-          </div>
-
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Business Type *</label>
-              <select className="form-control" value={form.businessType} onChange={e => set('businessType', e.target.value)}>
-                {BUSINESS_TYPE_OPTIONS.filter(b => b.key !== 'platform_admin').map(b => (
-                  <option key={b.key} value={b.key}>{b.emoji} {b.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Subscription Plan *</label>
-              <select className="form-control" value={form.plan} onChange={e => set('plan', e.target.value)}>
-                {PLAN_OPTIONS.map(p => (
-                  <option key={p} value={p}>{SUBSCRIPTION_PLANS[p].name} — ${SUBSCRIPTION_PLANS[p].monthlyPrice}/mo</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Internal Notes</label>
-            <textarea className="form-control" rows={2} value={form.notes}
-              onChange={e => set('notes', e.target.value)}
-              placeholder="Notes about this client (visible only to you)..."
-              style={{ resize: 'vertical' }} />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Client Reference Code</label>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input className="form-control" readOnly
-                value={showCode ? form.accessCode : '••••-••••-••••-••••'}
-                style={{ fontFamily: 'monospace', letterSpacing: 2 }} />
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCode(v => !v)} style={{ flexShrink: 0 }}>
-                {showCode ? <EyeOff size={13} /> : <Eye size={13} />}
-              </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => copyText(form.accessCode)} style={{ flexShrink: 0 }}>
-                <Copy size={13} />
-              </button>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => set('accessCode', generateAccessCode())} style={{ flexShrink: 0 }}>
-                New
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              <button type="submit" className="btn btn-primary">
+                <Shield size={14} /> {isEdit ? 'Update Client' : 'Create Client'}
               </button>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-              For your records only — the client logs in with email + password above
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary">
-              <Shield size={14} /> {isEdit ? 'Update Client' : 'Create Client & Login'}
-            </button>
           </div>
         </form>
       </div>
