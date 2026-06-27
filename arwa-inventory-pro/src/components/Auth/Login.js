@@ -16,7 +16,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const ok = login(email, password);
+    const ok = await login(email, password);
     setLoading(false);
     if (ok) {
       navigate('/');

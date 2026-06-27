@@ -1182,3 +1182,8 @@ select.form-control {
   .stats-grid { grid-template-columns: 1fr; }
   .tabs { overflow-x: auto; flex-wrap: nowrap; }
 }
+
+@keyframes slideRight {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}

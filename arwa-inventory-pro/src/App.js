@@ -33,10 +33,39 @@ import CashCounter from './components/CashCounter/CashCounter';
 import ModuleGuard from './components/Layout/ModuleGuard';
 import MasterPanel from './components/Master/MasterPanel';
 
+function AuthLoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%)',
+    }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: 16,
+        background: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 28, fontWeight: 900, color: '#fff',
+        marginBottom: 20, boxShadow: '0 0 40px rgba(79,70,229,0.5)',
+      }}>A</div>
+      <div style={{ width: 40, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', background: 'linear-gradient(90deg, #4F46E5, #7C3AED)',
+          animation: 'slideRight 1.2s ease infinite',
+          width: '60%',
+        }} />
+      </div>
+      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 14, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        Arwa 1.0 — Connecting...
+      </p>
+    </div>
+  );
+}
+
 function AppLayout() {
-  const { theme, colorTheme, isAuthenticated, onboarded, isSuperAdmin } = useApp();
+  const { theme, colorTheme, isAuthenticated, onboarded, isSuperAdmin, authLoading } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
+  if (authLoading) return <AuthLoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (

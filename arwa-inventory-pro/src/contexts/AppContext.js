@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS, BUSINESS_TYPES } from '../data/mockData';
 import { getBusinessDefaults } from '../data/businessData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
+import { fbAuth } from '../services/firebase';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { calcTax } from '../services/taxEngine';
 import wsClient from '../services/websocket';
 import { dbSet, dbGet } from '../services/db';
@@ -45,13 +47,14 @@ export function AppProvider({ children }) {
   const [clientConfigs, setClientConfigs] = useState(() => loadLS('arwa_clientConfigs', []));
 
   // auth
+  const [authLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const auth = loadLS('arwa_auth', null);
-    return auth ? auth.isAuthenticated : false;
+    const saved = loadLS('arwa_auth', null);
+    return saved ? saved.isAuthenticated : false;
   });
   const [currentUser, setCurrentUser] = useState(() => {
-    const auth = loadLS('arwa_auth', null);
-    return auth ? auth.currentUser : null;
+    const saved = loadLS('arwa_auth', null);
+    return saved ? saved.currentUser : null;
   });
 
   // data
@@ -321,6 +324,29 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('arwa_auth', JSON.stringify({ isAuthenticated, currentUser }));
   }, [isAuthenticated, currentUser]);
+
+  // ── Firebase Auth state observer ───────────────────────────────────────────
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(fbAuth, (firebaseUser) => {
+      if (firebaseUser) {
+        // Firebase user authenticated — restore full user object from localStorage
+        const saved = loadLS('arwa_auth', null);
+        if (saved?.isAuthenticated && saved?.currentUser?.email === firebaseUser.email) {
+          setCurrentUser(saved.currentUser);
+          setIsAuthenticated(true);
+        }
+      } else {
+        // Firebase says signed out — respect localStorage for legacy sessions (no Firebase account yet)
+        const saved = loadLS('arwa_auth', null);
+        if (!saved?.isAuthenticated) {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── helpers ──────────────────────────────────────────────────────────────
 
@@ -690,59 +716,84 @@ export function AppProvider({ children }) {
 
   // ─── auth ─────────────────────────────────────────────────────────────────
 
-  const login = useCallback((email, password) => {
-    // Check users array first, then fall back to clientConfigs (handles sync edge cases)
+  const login = useCallback(async (email, password) => {
+    // Step 1 — try Firebase Auth (secure, cloud-based)
+    let firebaseOk = false;
+    try {
+      await signInWithEmailAndPassword(fbAuth, email, password);
+      firebaseOk = true;
+    } catch {}
+
+    // Step 2 — find the user record in our local data
     let found = users.find(u => u.email === email && u.password === password)
       || USERS.find(u => u.email === email && u.password === password);
-    if (!found) {
-      const cfg = clientConfigs.find(c => c.email === email && c.loginPassword === password && c.status !== 'suspended' && c.status !== 'cancelled');
+
+    if (!found && !firebaseOk) {
+      // Fall back to clientConfigs for accounts not yet in Firebase
+      const cfg = clientConfigs.find(c =>
+        c.email === email && c.loginPassword === password &&
+        c.status !== 'suspended' && c.status !== 'cancelled'
+      );
       if (cfg) {
         found = { id: cfg.id, name: cfg.clientName, email: cfg.email, role: 'client', status: 'active', branch: 'Main Store', permissions: [] };
-        // Sync the user into the users array so future logins use the fast path
         setUsers(prev => {
           if (prev.find(u => u.email === email)) return prev.map(u => u.email === email ? { ...u, password } : u);
           return [...prev, { ...found, password }];
         });
+        // Auto-create Firebase account so next login uses Firebase Auth
+        createUserWithEmailAndPassword(fbAuth, email, password).catch(() => {});
       }
     }
-    if (!found) return false;
+
+    if (!found) {
+      if (firebaseOk) await signOut(fbAuth);
+      return false;
+    }
+
+    // Step 3 — if legacy succeeded but Firebase failed, create the Firebase account
+    if (!firebaseOk) {
+      createUserWithEmailAndPassword(fbAuth, email, password).catch(() => {});
+    }
+
+    // Step 4 — set auth state
     setCurrentUser(found);
     setIsAuthenticated(true);
-    // If this user is a super admin, don't apply client config
-    if (found.role === 'superadmin' || found.email === SUPER_ADMIN_EMAIL) return true;
-    // Check if there's a client config for this email or domain
-    const emailDomain = email.split('@')[1];
-    const clientCfg = clientConfigs.find(c =>
-      c.email === email || (c.domain && emailDomain && c.domain.toLowerCase() === emailDomain.toLowerCase())
-    );
-    if (clientCfg && clientCfg.status === 'active') {
-      const newBusinessType = clientCfg.businessType || 'general_retail';
-      setSubscription(prev => ({
-        ...prev,
-        businessType: newBusinessType,
-        plan: clientCfg.plan || prev.plan,
-        moduleOverrides: clientCfg.moduleOverrides || {},
-      }));
-      // Seed business-type-specific data on first login (or if business type changed)
-      const initializedFor = localStorage.getItem('arwa_dataInitializedFor');
-      if (initializedFor !== newBusinessType) {
-        const defaults = getBusinessDefaults(newBusinessType);
-        if (defaults) {
-          setProducts(defaults.products);
-          setSuppliers(defaults.suppliers);
-          setCustomers(defaults.customers);
-          setOrders(defaults.orders);
-          setNotifications(defaults.notifications);
-          setStockMovements(defaults.stockMovements);
-          if (defaults.salesOrders) setSalesOrders(defaults.salesOrders);
-          localStorage.setItem('arwa_dataInitializedFor', newBusinessType);
+
+    // Step 5 — apply client subscription + seed data (skip for super admin)
+    if (found.role !== 'superadmin' && found.email !== SUPER_ADMIN_EMAIL) {
+      const emailDomain = email.split('@')[1];
+      const clientCfg = clientConfigs.find(c =>
+        c.email === email || (c.domain && emailDomain && c.domain.toLowerCase() === emailDomain.toLowerCase())
+      );
+      if (clientCfg && clientCfg.status === 'active') {
+        const newBusinessType = clientCfg.businessType || 'general_retail';
+        setSubscription(prev => ({
+          ...prev,
+          businessType: newBusinessType,
+          plan: clientCfg.plan || prev.plan,
+          moduleOverrides: clientCfg.moduleOverrides || {},
+        }));
+        const initializedFor = localStorage.getItem('arwa_dataInitializedFor');
+        if (initializedFor !== newBusinessType) {
+          const defaults = getBusinessDefaults(newBusinessType);
+          if (defaults) {
+            setProducts(defaults.products);
+            setSuppliers(defaults.suppliers);
+            setCustomers(defaults.customers);
+            setOrders(defaults.orders);
+            setNotifications(defaults.notifications);
+            setStockMovements(defaults.stockMovements);
+            if (defaults.salesOrders) setSalesOrders(defaults.salesOrders);
+            localStorage.setItem('arwa_dataInitializedFor', newBusinessType);
+          }
         }
       }
     }
     return true;
   }, [users, clientConfigs, setUsers]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try { await signOut(fbAuth); } catch {}
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('arwa_auth');
@@ -755,6 +806,7 @@ export function AppProvider({ children }) {
   const currentTillSession = tillSessions.find(s => s.status === 'open') || null;
 
   const value = useMemo(() => ({
+    authLoading,
     theme, toggleTheme, colorTheme, setColorTheme,
     fontFamily, setFontFamily, fontSize, setFontSize,
     currency, setCurrency,
@@ -794,6 +846,7 @@ export function AppProvider({ children }) {
     tillSessions, currentTillSession, openTill, closeTill, addCashMovement,
     isSuperAdmin, isCompanyAdmin, clientConfigs, setClientConfigs,
   }), [
+    authLoading,
     theme, toggleTheme, colorTheme, setColorTheme, fontFamily, fontSize,
     currency, sidebarCollapsed, toast, showToast,
     isAuthenticated, currentUser, login, logout,
