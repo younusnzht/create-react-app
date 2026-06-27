@@ -108,17 +108,23 @@ export function AppProvider({ children }) {
   const [wsStatus, setWsStatus] = useState('disconnected'); // disconnected|connecting|connected
 
   // subscription
-  const [subscription, setSubscription] = useState(() => loadLS('arwa_subscription', {
-    plan: 'intermediate',
-    selfHealing: false,
-    billing: 'monthly',
-    status: 'active',
-    nextBilling: '2026-08-15',
-    trialDaysLeft: 0,
-    businessType: 'platform_admin',
-    enabledModules: [],
-    moduleOverrides: {}, // { '/path': true|false } — explicit per-module on/off
-  }));
+  const [subscription, setSubscription] = useState(() => {
+    const saved = loadLS('arwa_subscription', null);
+    const defaults = {
+      plan: 'intermediate',
+      selfHealing: false,
+      workflowAutomation: false,
+      aiAssistant: false,
+      billing: 'monthly',
+      status: 'active',
+      nextBilling: '2026-08-15',
+      trialDaysLeft: 0,
+      businessType: 'platform_admin',
+      enabledModules: [],
+      moduleOverrides: {},
+    };
+    return saved ? { ...defaults, ...saved } : defaults;
+  });
 
   const getEnabledModules = useCallback((sub = null) => {
     const s = sub || subscription;
