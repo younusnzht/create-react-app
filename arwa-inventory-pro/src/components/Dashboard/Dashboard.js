@@ -66,7 +66,6 @@ export default function Dashboard() {
   const healthColor = aiMetrics.healthScore >= 80 ? '#10B981' : aiMetrics.healthScore >= 60 ? '#F59E0B' : '#EF4444';
 
   const completedOrders = orders.filter(o => o.status === 'completed');
-  const totalRevenue = completedOrders.reduce((s, o) => s + (o.total || 0), 0);
   const today = new Date().toDateString();
   const ordersToday = completedOrders.filter(o => new Date(o.date).toDateString() === today).length;
 
@@ -129,7 +128,7 @@ export default function Dashboard() {
       {/* Stats Row */}
       <div className="stats-grid">
         <StatCard
-          label="Monthly Revenue" value={Math.round(totalRevenue)} prefix={currencySymbol}
+          label="Monthly Revenue" value={Math.round(thisMonthRevenue)} prefix={currencySymbol}
           change={revenueChange} icon={DollarSign}
           color="#10B981" bg="rgba(16,185,129,0.12)"
         />

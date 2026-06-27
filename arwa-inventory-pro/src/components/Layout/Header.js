@@ -29,6 +29,8 @@ const PAGE_TITLES = {
   '/sales-orders': 'Sales Orders',
   '/workflow-automation': 'Workflow Automation',
   '/ai-assistant': 'AI Assistant',
+  '/payment-methods': 'Payment Methods',
+  '/b2b-portal': 'B2B Portal Settings',
   '/master': 'Master Control Panel',
 };
 

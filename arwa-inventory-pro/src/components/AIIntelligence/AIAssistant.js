@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Bot, User, TrendingUp, Package, DollarSign, AlertTriangle, BarChart3, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, TrendingUp, Package, DollarSign, AlertTriangle, BarChart3 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const QUICK_PROMPTS = [

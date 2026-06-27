@@ -5,6 +5,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
+function getCurrencySymbol(code) {
+  const map = { CAD: 'CA$', USD: '$', EUR: '€', GBP: '£', AUD: 'A$', INR: '₹', AED: 'AED ' };
+  return map[code] || code + ' ';
+}
+
 const STATUS_CFG = {
   new:        { label: 'New',        color: '#4F46E5', bg: 'rgba(79,70,229,0.12)'  },
   processing: { label: 'Processing', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
@@ -40,7 +45,7 @@ function StatusBadge({ status }) {
 }
 
 function OrderModal({ order, onClose, onUpdateStatus, products, customers, currency }) {
-  const sym = 'CA$';
+  const sym = getCurrencySymbol(currency);
   const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(order.status) + 1];
 
   const handleAdvance = () => {
@@ -158,7 +163,8 @@ function OrderModal({ order, onClose, onUpdateStatus, products, customers, curre
   );
 }
 
-function NewOrderModal({ onClose, onSave, customers, products }) {
+function NewOrderModal({ onClose, onSave, customers, products, currency }) {
+  const sym = getCurrencySymbol(currency || 'CAD');
   const [customerId, setCustomerId] = useState('');
   const [reference, setReference] = useState('');
   const [dateRequired, setDateRequired] = useState('');
@@ -294,7 +300,7 @@ function NewOrderModal({ onClose, onSave, customers, products }) {
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <span>{p.name}</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{p.sku} · CA${p.salePrice}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{p.sku} · {sym}{p.salePrice}</span>
                 </div>
               ))}
             </div>
@@ -307,7 +313,7 @@ function NewOrderModal({ onClose, onSave, customers, products }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-tertiary)' }}>
-                  {['Product', 'Qty', 'Unit Price (CA$)', 'Total', ''].map(h => (
+                  {['Product', 'Qty', `Unit Price (${sym})`, 'Total', ''].map(h => (
                     <th key={h} style={{ padding: '9px 12px', fontSize: 11, fontWeight: 700, textAlign: h === 'Product' ? 'left' : 'right', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -331,7 +337,7 @@ function NewOrderModal({ onClose, onSave, customers, products }) {
                       />
                     </td>
                     <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, fontSize: 13 }}>
-                      CA${((item.qty || 0) * (item.unitPrice || 0)).toFixed(2)}
+                      {sym}{((item.qty || 0) * (item.unitPrice || 0)).toFixed(2)}
                     </td>
                     <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                       <button onClick={() => removeItem(item.productId)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444' }}><X size={14} /></button>
@@ -348,13 +354,13 @@ function NewOrderModal({ onClose, onSave, customers, products }) {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
             <div style={{ width: 260, fontSize: 13 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: 'var(--text-secondary)' }}>
-                <span>Subtotal</span><span>CA${subtotal.toFixed(2)}</span>
+                <span>Subtotal</span><span>{sym}{subtotal.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', color: 'var(--text-secondary)' }}>
-                <span>HST (13%)</span><span>CA${tax.toFixed(2)}</span>
+                <span>HST (13%)</span><span>{sym}{tax.toFixed(2)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', fontWeight: 800, fontSize: 15, borderTop: '2px solid var(--border)', marginTop: 4 }}>
-                <span>Total</span><span style={{ color: 'var(--primary-light)' }}>CA${total.toFixed(2)}</span>
+                <span>Total</span><span style={{ color: 'var(--primary-light)' }}>{sym}{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -371,6 +377,7 @@ function NewOrderModal({ onClose, onSave, customers, products }) {
 
 export default function SalesOrders() {
   const { salesOrders, addSalesOrder, updateSalesOrder, deleteSalesOrder, customers, products, currency, showToast } = useApp();
+  const sym = getCurrencySymbol(currency || 'CAD');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [viewOrder, setViewOrder] = useState(null);
@@ -487,7 +494,7 @@ export default function SalesOrders() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-tertiary)' }}>
-                  {['Order #', 'Customer', 'Reference', 'Items', 'Total (CA$)', 'Required By', 'Status', 'Actions'].map(h => (
+                  {['Order #', 'Customer', 'Reference', 'Items', `Total (${sym})`, 'Required By', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '11px 14px', fontSize: 11, fontWeight: 700, textAlign: 'left', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -506,7 +513,7 @@ export default function SalesOrders() {
                     <td style={{ padding: '12px 14px', fontSize: 13, textAlign: 'center' }}>
                       <span style={{ background: 'var(--bg-tertiary)', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{(order.items || []).length} SKUs</span>
                     </td>
-                    <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700 }}>CA${(order.total || 0).toLocaleString('en-CA', { minimumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700 }}>{sym}{(order.total || 0).toLocaleString('en-CA', { minimumFractionDigits: 2 })}</td>
                     <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--text-muted)' }}>
                       {order.dateRequired ? new Date(order.dateRequired).toLocaleDateString('en-CA') : '—'}
                     </td>

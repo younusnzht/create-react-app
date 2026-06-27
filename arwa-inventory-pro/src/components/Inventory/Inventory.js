@@ -46,7 +46,7 @@ function ProductModal({ product, suppliers, onClose, onSave }) {
       salePrice: parseFloat(form.salePrice) || 0,
       stock: parseInt(form.stock) || 0,
       minStock: parseInt(form.minStock) || 0,
-      tax: parseInt(form.tax) || 0,
+      tax: parseFloat(form.tax) || 0,
     });
   };
 

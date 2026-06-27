@@ -46,7 +46,7 @@ export default function POS() {
 
   const visibleProducts = products.filter(p => {
     const q = search.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.barcode.includes(q) || p.sku.toLowerCase().includes(q);
+    return p.name.toLowerCase().includes(q) || (p.barcode || '').includes(q) || p.sku.toLowerCase().includes(q);
   }).slice(0, 20);
 
   const addToCart = (product) => {
@@ -85,8 +85,10 @@ export default function POS() {
 
   const subtotal = cart.reduce((s, i) => s + i.salePrice * i.qty, 0);
   const discountAmt = subtotal * (discount / 100);
-  const taxAmt = cart.reduce((s, i) => s + i.salePrice * i.qty * (i.tax / 100), 0);
-  const taxedTotal = subtotal - discountAmt + taxAmt;
+  const discountedSubtotal = subtotal - discountAmt;
+  const discountRatio = subtotal > 0 ? discountedSubtotal / subtotal : 1;
+  const taxAmt = cart.reduce((s, i) => s + (i.salePrice * i.qty * discountRatio) * ((i.tax || 0) / 100), 0);
+  const taxedTotal = discountedSubtotal + taxAmt;
 
   // Loyalty points
   const selectedCustomer = customers.find(c => String(c.id) === String(selectedCustomerId));

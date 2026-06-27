@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Plus, Play, Pause, Trash2, ChevronRight, Package, ShoppingCart, Mail, Bell, FileText, Clock, CheckCircle, AlertTriangle, X, Toggle } from 'lucide-react';
+import { Zap, Plus, Play, Pause, Trash2, ChevronRight, Package, ShoppingCart, Mail, Bell, FileText, Clock, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 const TRIGGER_TYPES = [

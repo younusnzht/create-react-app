@@ -37,7 +37,7 @@ export function AppProvider({ children }) {
   // UI / theming
   const [theme, setTheme] = useState(() => loadLS('arwa_theme', 'dark'));
   const [colorTheme, setColorTheme] = useState(() => loadLS('arwa_colorTheme', 'indigo'));
-  const [currency, setCurrency] = useState(() => loadLS('arwa_currency', 'USD'));
+  const [currency, setCurrency] = useState(() => loadLS('arwa_currency', 'CAD'));
   const [fontFamily, setFontFamily] = useState(() => loadLS('arwa_fontFamily', 'Inter'));
   const [fontSize, setFontSize] = useState(() => loadLS('arwa_fontSize', '14'));
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -86,11 +86,11 @@ export function AppProvider({ children }) {
   const [stockMovements, setStockMovements] = useState(() => loadLS('arwa_stockMovements', STOCK_MOVEMENTS));
   const [tillSessions, setTillSessions] = useState(() => loadLS('arwa_till_sessions', []));
   const [notifications, setNotifications] = useState(() => loadLS('arwa_notifications', NOTIFICATIONS));
-  const [repairHistory, setRepairHistory] = useState(REPAIR_HISTORY);
+  const [repairHistory, setRepairHistory] = useState(() => loadLS('arwa_repairHistory', REPAIR_HISTORY));
 
   // AI
-  const [aiMetrics, setAiMetrics] = useState(AI_METRICS);
-  const [aiIssues, setAiIssues] = useState(AI_ISSUES);
+  const [aiMetrics, setAiMetrics] = useState(() => loadLS('arwa_aiMetrics', AI_METRICS));
+  const [aiIssues, setAiIssues] = useState(() => loadLS('arwa_aiIssues', AI_ISSUES));
 
   // AI API config + usage tracking
   const [apiKey, setApiKeyState] = useState(() => loadLS('arwa_apiKey', ''));
@@ -130,7 +130,7 @@ export function AppProvider({ children }) {
   const getEnabledModules = useCallback((sub = null) => {
     const s = sub || subscription;
     const type = BUSINESS_TYPES[s.businessType] || BUSINESS_TYPES.platform_admin;
-    if (type.modules[0] === 'ALL' && !s.moduleOverrides) return null; // platform_admin with no overrides = show everything
+    if (type.modules[0] === 'ALL' && Object.keys(s.moduleOverrides || {}).length === 0) return null; // platform_admin with no overrides = show everything
     // Start from business-type base + any legacy enabledModules additions
     let base = type.modules[0] === 'ALL'
       ? ['/', '/pos', '/inventory', '/cash-counter', '/customers', '/suppliers', '/online-orders',
@@ -220,6 +220,9 @@ export function AppProvider({ children }) {
   useEffect(() => localStorage.setItem('arwa_businessName', JSON.stringify(businessName)), [businessName]);
   useEffect(() => localStorage.setItem('arwa_till_sessions', JSON.stringify(tillSessions)), [tillSessions]);
   useEffect(() => localStorage.setItem('arwa_clientConfigs', JSON.stringify(clientConfigs)), [clientConfigs]);
+  useEffect(() => localStorage.setItem('arwa_repairHistory', JSON.stringify(repairHistory)), [repairHistory]);
+  useEffect(() => localStorage.setItem('arwa_aiMetrics', JSON.stringify(aiMetrics)), [aiMetrics]);
+  useEffect(() => localStorage.setItem('arwa_aiIssues', JSON.stringify(aiIssues)), [aiIssues]);
 
   // ── Mirror business data to IndexedDB for durability ──────────────────────
   useEffect(() => {
@@ -383,11 +386,12 @@ export function AppProvider({ children }) {
     setAuditLog(prev => [{
       id: Date.now(),
       timestamp: new Date().toISOString(),
-      user: 'Admin',
+      user: currentUser?.name || 'System',
+      userId: currentUser?.id || null,
       action,
       ...details,
     }, ...prev].slice(0, 500));
-  }, []);
+  }, [currentUser]);
 
   const addStockTransfer    = useCallback((t) => setStockTransfers(prev => [t, ...prev]), []);
   const addBackorder        = useCallback((b) => setBackorders(prev => [b, ...prev]), []);
@@ -580,7 +584,7 @@ export function AppProvider({ children }) {
     if (coupon.targetEmail && coupon.targetEmail.toLowerCase() !== userEmail.toLowerCase()) return { ok: false, error: 'This coupon is not valid for your account.' };
     if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) return { ok: false, error: 'This coupon has expired.' };
     if (coupon.usageLimit && coupon.usedBy.length >= coupon.usageLimit) return { ok: false, error: 'This coupon has reached its usage limit.' };
-    if (coupon.usedBy.includes(userEmail)) return { ok: false, error: 'You have already used this coupon.' };
+    if (coupon.usedBy.some(e => e.toLowerCase() === userEmail.toLowerCase())) return { ok: false, error: 'You have already used this coupon.' };
     setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, usedBy: [...c.usedBy, userEmail] } : c));
     return { ok: true, coupon };
   }, [coupons]);

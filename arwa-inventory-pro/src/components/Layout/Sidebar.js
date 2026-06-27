@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown, LogOut, ClipboardList, Zap, Sparkles
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown, LogOut, ClipboardList, Zap, Sparkles, Building2
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -35,6 +35,8 @@ const NAV_ITEMS = [
   { path: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
   { section: 'Account & Admin' },
   { path: '/subscription', label: 'Subscription', icon: CreditCard },
+  { path: '/payment-methods', label: 'Payment Methods', icon: DollarSign },
+  { path: '/b2b-portal', label: 'B2B Portal', icon: Building2 },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -93,10 +95,21 @@ export default function Sidebar() {
             <span className="nav-label" style={{ color: 'var(--text-primary)', fontWeight: 700 }}>Master Control</span>
           </NavLink>
         )}
-        {NAV_ITEMS.map((item, i) => {
-          if (item.section) {
-            return <div key={i} className="nav-section-label">{item.section}</div>;
-          }
+        {(() => {
+          // Build a set of section indices that have at least one visible item
+          const visibleSections = new Set();
+          let currentSectionIdx = -1;
+          NAV_ITEMS.forEach((item, i) => {
+            if (item.section) { currentSectionIdx = i; }
+            else if (currentSectionIdx >= 0 && isModuleEnabled(item.path)) {
+              visibleSections.add(currentSectionIdx);
+            }
+          });
+          return NAV_ITEMS.map((item, i) => {
+            if (item.section) {
+              if (!visibleSections.has(i)) return null;
+              return <div key={i} className="nav-section-label">{item.section}</div>;
+            }
 
           const Icon = item.icon;
           const isAI = item.path === '/ai-guardian';
@@ -123,19 +136,20 @@ export default function Sidebar() {
               )}
             </NavLink>
           );
-        })}
+          });
+        })()}
       </nav>
 
       <div className="sidebar-footer">
         <div className="user-card">
           <div className="user-avatar" style={{ flexShrink: 0 }}>
-            {currentUser.name.charAt(0)}
+            {currentUser?.name?.charAt(0) ?? '?'}
           </div>
           <div className="user-info">
-            <h4>{currentUser.name}</h4>
+            <h4>{currentUser?.name}</h4>
             <p style={{ textTransform: 'capitalize', color: 'var(--primary-light)', fontSize: '11px', fontWeight: 600 }}>
               <Shield size={10} style={{ display: 'inline', marginRight: 3 }} />
-              {currentUser.role}
+              {currentUser?.role}
             </p>
           </div>
         </div>

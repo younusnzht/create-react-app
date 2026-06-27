@@ -164,15 +164,6 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{
-          marginTop: 28, padding: '14px 16px',
-          background: 'var(--bg-tertiary)', borderRadius: 10,
-          border: '1px solid var(--border)',
-          textAlign: 'center',
-        }}>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demo Credentials</p>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>admin@arwaenterprises.com / admin123</p>
-        </div>
       </div>
     </div>
   );

@@ -34,6 +34,9 @@ import ModuleGuard from './components/Layout/ModuleGuard';
 import MasterPanel from './components/Master/MasterPanel';
 import WorkflowAutomation from './components/AIIntelligence/WorkflowAutomation';
 import AIAssistant from './components/AIIntelligence/AIAssistant';
+import PaymentMethods from './components/Billing/PaymentMethods';
+import B2BPortalSettings from './components/B2BPortal/B2BPortalSettings';
+import B2BOrderPortal from './components/B2BPortal/B2BOrderPortal';
 
 function AuthLoadingScreen() {
   return (
@@ -103,6 +106,8 @@ function AppLayout() {
             <Route path="/cash-counter" element={<ModuleGuard path="/cash-counter"><CashCounter /></ModuleGuard>} />
             <Route path="/workflow-automation" element={<WorkflowAutomation />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route path="/payment-methods" element={<PaymentMethods />} />
+            <Route path="/b2b-portal" element={<B2BPortalSettings />} />
             <Route path="/master" element={<MasterPanel />} />
           </Routes>
         </div>
@@ -119,6 +124,7 @@ function AppRouter() {
     <div data-theme={theme} data-color-theme={colorTheme} style={{ minHeight: '100vh' }}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/b2b-order" element={<B2BOrderPortal />} />
         <Route path="/*" element={
           <ErrorBoundary>
             <AppLayout />
