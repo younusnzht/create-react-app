@@ -187,6 +187,39 @@ export const AI_ADDONS = {
   },
 };
 
+export const NOTIFICATION_ADDONS = {
+  emailNotif: {
+    id: 'emailNotif',
+    name: 'Email Notifications',
+    monthlyPrice: 19,
+    yearlyPrice: 190,
+    icon: '📧',
+    gradient: 'linear-gradient(135deg, #0EA5E9, #6366F1)',
+    description: 'Instant email alerts for new B2B orders, low stock, and daily summaries',
+    features: ['New order email alerts', 'Low stock warnings', 'Daily summary digest', 'Custom notification email'],
+  },
+  smsNotif: {
+    id: 'smsNotif',
+    name: 'SMS Alerts',
+    monthlyPrice: 29,
+    yearlyPrice: 290,
+    icon: '📱',
+    gradient: 'linear-gradient(135deg, #10B981, #059669)',
+    description: 'Instant SMS text messages for critical business events',
+    features: ['New order SMS', 'Critical stock alerts', 'Payment confirmation', '100 SMS/month included'],
+  },
+  whatsappNotif: {
+    id: 'whatsappNotif',
+    name: 'WhatsApp Business',
+    monthlyPrice: 39,
+    yearlyPrice: 390,
+    icon: '💬',
+    gradient: 'linear-gradient(135deg, #25D366, #128C7E)',
+    description: 'WhatsApp Business API messages for orders and real-time alerts',
+    features: ['Order notifications via WhatsApp', 'Automated order updates to customers', 'B2B order confirmations', 'WhatsApp Business API'],
+  },
+};
+
 export const PRODUCTS = [
   { id: 1, name: 'Paracetamol 500mg', sku: 'MED-001', barcode: '8901234567890', category: 'Pharmaceuticals', supplier: 'PharmaCo Ltd', purchasePrice: 2.50, salePrice: 5.99, stock: 450, minStock: 100, expiry: '2027-12-31', warehouse: 'Main Store', image: null, tax: 0, status: 'active' },
   { id: 2, name: 'iPhone 15 Pro', sku: 'ELEC-001', barcode: '8902345678901', category: 'Electronics', supplier: 'TechSupply Inc', purchasePrice: 850, salePrice: 1199, stock: 23, minStock: 5, expiry: null, warehouse: 'Main Store', image: null, tax: 15, status: 'active' },

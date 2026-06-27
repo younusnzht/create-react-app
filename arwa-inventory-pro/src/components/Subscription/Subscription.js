@@ -5,7 +5,8 @@ import {
   Users, Bot, Tag
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
-import { SUBSCRIPTION_PLANS, AI_ADDONS, ORDER_ADDON_PRICE, BUSINESS_TYPES } from '../../data/mockData';
+import { SUBSCRIPTION_PLANS, AI_ADDONS, ORDER_ADDON_PRICE, BUSINESS_TYPES, NOTIFICATION_ADDONS } from '../../data/mockData';
+import { SUPER_ADMIN_EMAIL } from '../../contexts/AppContext';
 
 const MODULE_INFO = {
   '/pos':             { label: 'Point of Sale',           emoji: '🛒', desc: 'Full POS terminal with barcode scanning, receipts and split payments', price: '$19/mo' },
@@ -155,7 +156,7 @@ function AIAddonCard({ addon, active, onToggle, billing }) {
 }
 
 export default function Subscription() {
-  const { subscription, setSubscription, showToast, orders, getEnabledModules, users, currentUser, redeemCoupon } = useApp();
+  const { subscription, setSubscription, showToast, orders, getEnabledModules, users, currentUser, redeemCoupon, isSuperAdmin } = useApp();
   const [billing, setBilling] = useState(subscription.billing);
   const [showUpgradeModal, setShowUpgradeModal] = useState(null);
   const [couponInput, setCouponInput] = useState('');
@@ -195,6 +196,15 @@ export default function Subscription() {
       newVal ? `${AI_ADDONS[addonId].name} activated!` : `${AI_ADDONS[addonId].name} deactivated`,
       newVal ? 'success' : 'info'
     );
+  };
+
+  const toggleNotifAddon = (addonId) => {
+    if (!isSuperAdmin && !subscription[addonId]) {
+      showToast('Contact your platform administrator to activate this add-on', 'warning');
+      return;
+    }
+    setSubscription(prev => ({ ...prev, [addonId]: !prev[addonId] }));
+    showToast(`${NOTIFICATION_ADDONS[addonId]?.name} ${!subscription[addonId] ? 'activated' : 'deactivated'}`, !subscription[addonId] ? 'success' : 'info');
   };
 
   const basePrice = billing === 'yearly' ? currentPlan.yearlyPrice : currentPlan.monthlyPrice;
@@ -399,6 +409,54 @@ export default function Subscription() {
         </p>
       </div>
 
+      {/* Communication Add-ons */}
+      <div className="card" style={{ marginBottom: 28 }}>
+        <div className="card-header" style={{ marginBottom: 20 }}>
+          <div>
+            <h3 className="card-title">Communication Add-ons</h3>
+            <p className="card-subtitle">Stay notified when B2B orders arrive or stock runs low — enabled by your platform administrator</p>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {Object.values(NOTIFICATION_ADDONS).map(addon => {
+            const active = !!subscription[addon.id];
+            return (
+              <div key={addon.id} style={{ padding: 20, borderRadius: 14, border: `1px solid ${active ? 'rgba(79,70,229,0.4)' : 'var(--border)'}`, background: active ? 'rgba(79,70,229,0.06)' : 'var(--bg-tertiary)', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: addon.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                      {addon.icon}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{addon.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--primary-light)', fontWeight: 600 }}>CA${addon.monthlyPrice}/mo</div>
+                    </div>
+                  </div>
+                  {active && <span style={{ padding: '3px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: 11, fontWeight: 700 }}>Active</span>}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 14 }}>{addon.description}</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {addon.features.map((f, i) => (
+                    <li key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: active ? '#10B981' : 'var(--text-muted)' }}>✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => toggleNotifAddon(addon.id)}
+                  style={{ width: '100%', padding: '9px', borderRadius: 8, border: `1px solid ${active ? 'rgba(239,68,68,0.3)' : 'rgba(79,70,229,0.35)'}`, background: active ? 'rgba(239,68,68,0.08)' : 'rgba(79,70,229,0.1)', color: active ? '#EF4444' : 'var(--primary-light)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {active ? 'Deactivate' : (isSuperAdmin ? 'Activate' : 'Contact Admin to Activate')}
+                </button>
+                {!active && !isSuperAdmin && (
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', textAlign: 'center', marginTop: 6 }}>Enabled by platform administrator only</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Module Add-Ons */}
       {(() => {
         const bt = BUSINESS_TYPES[subscription?.businessType || 'platform_admin'];
@@ -459,6 +517,106 @@ export default function Subscription() {
           </div>
         );
       })()}
+
+      {/* Communication Add-Ons (master-only activation) */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📡</div>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800 }}>Communication Add-Ons</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Real-time order notifications for your team — enabled by your account manager</p>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+          {Object.values(NOTIFICATION_ADDONS).map(addon => {
+            const active = !!subscription[addon.id];
+            const isMaster = currentUser?.email === SUPER_ADMIN_EMAIL;
+            const price = billing === 'yearly' ? addon.yearlyPrice : addon.monthlyPrice;
+            return (
+              <div key={addon.id} style={{
+                background: active ? 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(5,150,105,0.04))' : 'var(--bg-secondary)',
+                border: `2px solid ${active ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-lg)',
+                padding: 18,
+                transition: 'all 0.2s',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: addon.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{addon.icon}</div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800 }}>{addon.name}</span>
+                      {active && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 8, background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>ACTIVE</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{addon.subtitle}</div>
+                  </div>
+                </div>
+                <ul style={{ margin: '0 0 12px 0', padding: '0 0 0 14px' }}>
+                  {addon.features.map((f, i) => (
+                    <li key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 3, lineHeight: 1.4 }}>{f}</li>
+                  ))}
+                </ul>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: active ? '#10B981' : 'var(--primary-light)' }}>${price}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>/{billing === 'yearly' ? 'yr' : 'mo'}</span>
+                  </div>
+                  {isMaster ? (
+                    <button
+                      className={`btn btn-sm ${active ? 'btn-danger' : 'btn-primary'}`}
+                      style={{ minWidth: 100, justifyContent: 'center', background: active ? undefined : addon.gradient }}
+                      onClick={() => {
+                        setSubscription(prev => ({ ...prev, [addon.id]: !prev[addon.id] }));
+                        showToast(`${addon.name} ${active ? 'deactivated' : 'activated'}`, active ? 'info' : 'success');
+                      }}
+                    >
+                      {active ? <><X size={12} /> Deactivate</> : <><CheckCircle size={12} /> Activate</>}
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      {active ? '● Active' : 'Contact admin to enable'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {currentUser?.email !== SUPER_ADMIN_EMAIL && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>
+            📞 Contact your account manager to activate Email, SMS, or WhatsApp notifications for your account.
+          </p>
+        )}
+        {/* Notification contact config (shown when any add-on is active) */}
+        {(subscription.emailNotif || subscription.smsNotif || subscription.whatsappNotif) && (
+          <div style={{ marginTop: 16, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 10 }}>NOTIFICATION DELIVERY</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {subscription.emailNotif && (
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>Notification Email</label>
+                  <input
+                    className="form-control"
+                    placeholder="orders@yourcompany.com"
+                    value={subscription.notifEmail || ''}
+                    onChange={e => setSubscription(prev => ({ ...prev, notifEmail: e.target.value }))}
+                  />
+                </div>
+              )}
+              {(subscription.smsNotif || subscription.whatsappNotif) && (
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 4 }}>Phone Number (for SMS/WhatsApp)</label>
+                  <input
+                    className="form-control"
+                    placeholder="+1 (416) 555-0100"
+                    value={subscription.notifPhone || ''}
+                    onChange={e => setSubscription(prev => ({ ...prev, notifPhone: e.target.value }))}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Coupon Redemption */}
       <div className="card" style={{ marginBottom: 24 }}>

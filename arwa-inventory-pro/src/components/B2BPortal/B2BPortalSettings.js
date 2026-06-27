@@ -3,7 +3,7 @@ import { Globe, Copy, Eye, CheckCircle } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
 export default function B2BPortalSettings() {
-  const { subscription, setSubscription, showToast, businessName } = useApp();
+  const { subscription, setSubscription, showToast, businessName, clientConfigs, currentUser } = useApp();
   const portalConfig = subscription.b2bPortal || {};
   const [config, setConfig] = useState({
     enabled: portalConfig.enabled ?? false,
@@ -16,7 +16,10 @@ export default function B2BPortalSettings() {
     primaryColor: portalConfig.primaryColor || '#4F46E5',
   });
 
-  const portalUrl = `${window.location.origin}/b2b-order`;
+  const clientCfg = clientConfigs?.find(c => c.email === currentUser?.email);
+  const storeCode = clientCfg?.accessCode || clientCfg?.id || '';
+  const portalURL = `${window.location.origin}/b2b-order${storeCode ? `?store=${storeCode}` : ''}`;
+  const portalUrl = portalURL;
   const shortCode = btoa((businessName || 'arwa').slice(0, 6)).slice(0, 8).toLowerCase();
 
   const save = () => {

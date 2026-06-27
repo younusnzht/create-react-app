@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { PRODUCTS, USERS, ORDERS, NOTIFICATIONS, AI_METRICS, AI_ISSUES, REPAIR_HISTORY, SUPPLIERS, ONLINE_ORDERS, CUSTOMERS, STOCK_MOVEMENTS, SUBSCRIPTION_PLANS, BUSINESS_TYPES } from '../data/mockData';
 import { getBusinessDefaults } from '../data/businessData';
 import { PLAN_DAILY_LIMITS, OVERAGE_COST_PER_SCAN } from '../services/claudeAI';
@@ -116,6 +116,11 @@ export function AppProvider({ children }) {
       selfHealing: false,
       workflowAutomation: false,
       aiAssistant: false,
+      emailNotif: false,
+      smsNotif: false,
+      whatsappNotif: false,
+      notifEmail: '',
+      notifPhone: '',
       billing: 'monthly',
       status: 'active',
       nextBilling: '2026-08-15',
@@ -123,6 +128,8 @@ export function AppProvider({ children }) {
       businessType: 'platform_admin',
       enabledModules: [],
       moduleOverrides: {},
+      connectedPaymentMethod: null,
+      b2bPortal: { enabled: false, portalName: '', requireApproval: true, showPrices: true, minOrderValue: 0, allowedEmails: '' },
     };
     return saved ? { ...defaults, ...saved } : defaults;
   });
@@ -164,6 +171,9 @@ export function AppProvider({ children }) {
   // ─── onboarding ───────────────────────────────────────────────────────────
   const [onboarded, setOnboarded] = useState(() => loadLS('arwa_onboarded', false));
   const [businessName, setBusinessName] = useState(() => loadLS('arwa_businessName', 'Arwa Enterprises'));
+
+  // ─── Firestore B2B order listener ─────────────────────────────────────────
+  const b2bUnsubscribeRef = useRef(null);
 
   // persistence effects
   useEffect(() => localStorage.setItem('arwa_theme',         JSON.stringify(theme)),         [theme]);
@@ -818,22 +828,52 @@ export function AppProvider({ children }) {
     }
 
     // Auto-onboard client with master-assigned business name
-    if (found.role === 'client' || (found.role !== 'superadmin' && found.email !== SUPER_ADMIN_EMAIL)) {
-      const emailDomain2 = email.split('@')[1];
-      const cfg2 = clientConfigs.find(c =>
-        c.email === email || (c.domain && emailDomain2 && c.domain.toLowerCase() === emailDomain2.toLowerCase())
-      );
+    const emailDomain2 = email.split('@')[1];
+    const cfg2 = clientConfigs.find(c =>
+      c.email === email || (c.domain && emailDomain2 && c.domain.toLowerCase() === emailDomain2.toLowerCase())
+    );
+    if (found.role !== 'superadmin' && found.email !== SUPER_ADMIN_EMAIL) {
       if (cfg2?.clientName) {
         setBusinessName(cfg2.clientName);
         setOnboarded(true);
       }
     }
 
+    // Start Firestore listener for B2B orders (non-super-admin only)
+    if (found.email !== SUPER_ADMIN_EMAIL) {
+      try {
+        const { listenB2BOrders } = await import('../services/firestoreService');
+        const clientCode = cfg2?.accessCode || cfg2?.id || email;
+        if (b2bUnsubscribeRef.current) b2bUnsubscribeRef.current();
+        b2bUnsubscribeRef.current = listenB2BOrders(clientCode, (firestoreOrders) => {
+          setSalesOrders(prev => {
+            const existingIds = new Set(prev.filter(o => o.firestoreId).map(o => o.firestoreId));
+            const newOrders = firestoreOrders.filter(o => !existingIds.has(o.firestoreId));
+            if (newOrders.length === 0) return prev;
+            newOrders.forEach(order => {
+              setNotifications(n => [{
+                id: Date.now() + Math.random(),
+                type: 'info',
+                message: `New B2B order from ${order.companyName || 'portal'} — ${order.items?.length || 0} item(s)`,
+                time: 'just now',
+                read: false,
+              }, ...n]);
+            });
+            return [...newOrders, ...prev];
+          });
+        });
+      } catch {}
+    }
+
     return true;
-  }, [users, clientConfigs, setUsers]);
+  }, [users, clientConfigs, setUsers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const logout = useCallback(async () => {
     try { await signOut(fbAuth); } catch {}
+    if (b2bUnsubscribeRef.current) {
+      b2bUnsubscribeRef.current();
+      b2bUnsubscribeRef.current = null;
+    }
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('arwa_auth');
