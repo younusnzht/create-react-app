@@ -32,6 +32,8 @@ import SalesOrders from './components/SalesOrders/SalesOrders';
 import CashCounter from './components/CashCounter/CashCounter';
 import ModuleGuard from './components/Layout/ModuleGuard';
 import MasterPanel from './components/Master/MasterPanel';
+import WorkflowAutomation from './components/AIIntelligence/WorkflowAutomation';
+import AIAssistant from './components/AIIntelligence/AIAssistant';
 
 function AuthLoadingScreen() {
   return (
@@ -99,6 +101,8 @@ function AppLayout() {
             <Route path="/quotes" element={<ModuleGuard path="/quotes"><Quotes /></ModuleGuard>} />
             <Route path="/sales-orders" element={<ModuleGuard path="/sales-orders"><SalesOrders /></ModuleGuard>} />
             <Route path="/cash-counter" element={<ModuleGuard path="/cash-counter"><CashCounter /></ModuleGuard>} />
+            <Route path="/workflow-automation" element={<WorkflowAutomation />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/master" element={<MasterPanel />} />
           </Routes>
         </div>

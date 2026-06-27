@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3, Bot,
-  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown, LogOut, ClipboardList
+  CreditCard, QrCode, Truck, Settings, ChevronLeft, ChevronRight, Shield, UtensilsCrossed, Users2, Receipt, Hash, ArrowRight, AlertTriangle, DollarSign, BookOpen, FileText, Landmark, Crown, LogOut, ClipboardList, Zap, Sparkles
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 
@@ -29,8 +29,11 @@ const NAV_ITEMS = [
   { path: '/payroll',         label: 'Payroll / T4',    icon: DollarSign },
   { path: '/accounting',      label: 'Accounting',      icon: BookOpen },
   { path: '/cra-audit',       label: 'CRA Audit Export', icon: Shield },
-  { section: 'AI & Platform' },
+  { section: 'AI Intelligence' },
   { path: '/ai-guardian', label: 'AI Guardian', icon: Bot, badge: 'AI', aiFeature: true },
+  { path: '/workflow-automation', label: 'Workflow Automation', icon: Zap },
+  { path: '/ai-assistant', label: 'AI Assistant', icon: Sparkles },
+  { section: 'Account & Admin' },
   { path: '/subscription', label: 'Subscription', icon: CreditCard },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
